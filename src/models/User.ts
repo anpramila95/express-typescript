@@ -32,7 +32,8 @@ export class User implements IUser {
     public github: string;
     public tokens: any[]; // Note: Storing tokens in a TEXT/JSON column is needed
     public affiliate_id?: number | null; // Optional affiliate ID
-    public referral_id?: string;
+    public site_id: number; // Required site ID
+
 
     constructor(user: any) {
         this.id = user.id;
@@ -53,10 +54,50 @@ export class User implements IUser {
         this.tokens = typeof user.tokens === 'string' ? JSON.parse(user.tokens) : user.tokens || [];
         this.isAdmin = user.isAdmin || false; // Default to false if not set
         this.last_login = user.last_login || new Date();
+        this.site_id = user.site_id;
     }
     public instagram: string;
     public linkedin: string;
     public steam: string;
+
+
+    /**
+    FOR ADMIN SITE */
+    //find all by site_id, can filter and seaching
+    public static async findAllBySiteId(siteId: number, filter: string = '', page: number = 1, limit: number = 10): Promise<{ users: User[], total: number }> {
+        const offset = (page - 1) * limit;
+        const sql = `
+            SELECT * FROM users
+            WHERE site_id = ? AND (email LIKE ? OR fullname LIKE ?)
+            LIMIT ? OFFSET ?
+        `;
+        try {
+            //cehck has filter
+            if (!filter) {
+                filter = ''; // Default to empty string if no filter provided
+            }
+            filter = filter.trim(); // Trim whitespace from the filter
+            
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [
+                siteId,
+                `%${filter}%`,
+                `%${filter}%`,
+                limit,
+                offset
+            ]);
+            const users = rows.map(row => new User(row));
+            
+            // Lấy tổng số người dùng để phân trang
+            const countSql = 'SELECT COUNT(*) as total FROM users WHERE site_id = ? AND (email LIKE ? OR fullname LIKE ?)';
+            const [countRows] = await Database.pool.query<RowDataPacket[]>(countSql, [siteId, `%${filter}%`, `%${filter}%`]);
+            const total = countRows[0].total;
+
+            return { users, total };
+        } catch (error) {
+            Log.error(`Error finding users by site ID: ${error.message}`);
+            throw error;
+        }
+    }
 
     /**
      * Finds a user by its id
@@ -74,14 +115,14 @@ export class User implements IUser {
             return null;
         }
     }
-
+    
     /**
      * Finds a user by its email
      */
-    public static async findOne({ email }: { email: string }): Promise<User | null> {
-        const sql = 'SELECT * FROM users WHERE email = ?';
+    public static async findOne({ email, site_id }: { email: string, site_id: number }): Promise<User | null> {
+        const sql = 'SELECT * FROM users WHERE email = ? AND site_id = ?';
         try {
-            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [email]);
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [email, site_id]);
             if (rows.length > 0) {
                 return new User(rows[0]);
             }

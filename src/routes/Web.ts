@@ -10,15 +10,12 @@ import { Router } from 'express';
 import Cache from './../providers/Cache';
 import Passport from './../providers/Passport';
 
-import HomeController from '../controllers/Home';
-import AccountController from '../controllers/Account';
 import LoginController from '../controllers/Auth/Login';
 import LogoutController from '../controllers/Auth/Logout';
 import SocialController from '../controllers/Auth/Social';
 import RegisterController from '../controllers/Auth/Register';
 
 const router = Router();
-const cache = Cache.cache;
 
 // router.get('/', cache(10), HomeController.index);
 
@@ -38,6 +35,12 @@ router.get('/auth/google/callback', passport.authenticate('google', { failureRed
 router.get('/auth/twitter', passport.authenticate('twitter'));
 router.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/login' }), (req, res) => {
 	res.redirect('/');
+});
+
+router.get('/lang/:locale', (req, res) => {
+    const { locale } = req.params;
+    res.cookie('locale', locale, { maxAge: 900000, httpOnly: true });
+    res.redirect('back');
 });
 
 export default router;

@@ -10,7 +10,9 @@ export interface Tokens {
 	tokenSecret?: string;
 }
 
+
 export interface IUser {
+    isAdmin: any;
 	email: string;
 	password: string;
 	passwordResetToken: string;
@@ -30,6 +32,9 @@ export interface IUser {
 	geolocation: string;
 	website: string;
 	picture: string;
+
+	site_id: number;
+	affiliate_id: number;
 }
 
 export default IUser;

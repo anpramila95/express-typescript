@@ -6,6 +6,7 @@ import Log from '../../../middlewares/Log';
 import SubscriptionPlan from '../../../models/SubscriptionPlan';
 import User from '../../../models/User';
 import AffiliateService from '../../../services/AffiliateService'; // <-- Import service mới
+import WithdrawalRequest from '../../../models/WithdrawalRequest';
 
 
 interface AuthenticatedUser {
@@ -135,6 +136,91 @@ class ApprovalController {
         } catch (error) {
             Log.error(`Lỗi khi admin cộng credit: ${error.stack}`);
             return res.status(500).json({ error: 'Đã xảy ra lỗi hệ thống.' });
+        }
+    }
+
+    /**
+     * Lấy danh sách các yêu cầu rút tiền đang chờ duyệt.
+     */
+    public static async listPendingWithdrawals(req: Request, res: Response): Promise<Response> {
+        const requests = await WithdrawalRequest.findAllPending();
+        return res.json(requests);
+    }
+
+    /**
+     * Lấy danh sách yêu cầu rút tiền (có thể lọc theo trạng thái và có phân trang).
+     * Dành cho admin.
+     */
+    public static async listWithdrawals(req: Request, res: Response): Promise<Response> {
+        const { status, page = 1, limit = 15 } = req.query;
+        const offset = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
+
+        try {
+            const { items, total } = await WithdrawalRequest.findAll({
+                status: status as any,
+                limit: parseInt(limit as string, 10),
+                offset
+            });
+
+            return res.json({
+                items,
+                pager: {
+                    currentPage: parseInt(page as string, 10),
+                    perPage: parseInt(limit as string, 10),
+                    totalItems: total,
+                    totalPages: Math.ceil(total / parseInt(limit as string, 10))
+                }
+            });
+        } catch (error) {
+            Log.error(`Lỗi khi admin lấy danh sách yêu cầu rút tiền: ${error.stack}`);
+            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+        }
+    }
+    
+    /**
+     * Lấy thông tin chi tiết của một yêu cầu rút tiền.
+     */
+    public static async getWithdrawalDetails(req: Request, res: Response): Promise<Response> {
+        const { requestId } = req.params;
+
+        try {
+            const details = await WithdrawalRequest.findDetailsById(parseInt(requestId, 10));
+
+            if (details) {
+                return res.json(details);
+            } else {
+                return res.status(404).json({ error: 'Không tìm thấy yêu cầu rút tiền.' });
+            }
+        } catch (error) {
+            Log.error(`Lỗi khi lấy chi tiết yêu cầu rút tiền: ${error.stack}`);
+            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+        }
+    }
+
+    /**
+     * Xử lý một yêu cầu rút tiền (duyệt hoặc từ chối).
+     */
+    public static async processWithdrawal(req: Request, res: Response): Promise<Response> {
+        const { requestId } = req.params;
+        const { status, adminNotes } = req.body; // status: 'approved' hoặc 'rejected'
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
+        }
+        if (status === 'rejected' && !adminNotes) {
+            return res.status(400).json({ error: 'Vui lòng cung cấp lý do từ chối.' });
+        }
+
+        try {
+            const success = await WithdrawalRequest.updateStatus(parseInt(requestId, 10), status, adminNotes);
+            if (success) {
+                return res.json({ message: `Đã xử lý yêu cầu rút tiền thành công với trạng thái: ${status}.` });
+            } else {
+                return res.status(404).json({ error: 'Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý.' });
+            }
+        } catch (error) {
+            Log.error(`Lỗi khi xử lý yêu cầu rút tiền: ${error.stack}`);
+            return res.status(500).json({ error: 'Lỗi máy chủ.' });
         }
     }
 }
