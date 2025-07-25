@@ -1,1 +1,10 @@
-{}
+{
+
+    "account_info": {
+        "success": "Thông tin tài khoản đã được cập nhật thành công.",
+        "error": "Đã xảy ra lỗi khi cập nhật thông tin tài khoản. Vui lòng thử lại sau.",
+        "not_found": "Tài khoản không tồn tại.",
+        "invalid_data": "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.",
+        "update_failed": "Cập nhật thông tin tài khoản thất bại. Vui lòng thử lại."
+    }
+}

@@ -10,9 +10,10 @@ import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import Database from '../providers/Database';
 import { IUser } from '../interfaces/models/user';
 import Log from '../middlewares/Log';
-
+import { ISite } from './Site'; // Import ISite interface
 
 export class User implements IUser {
+
     public id: number;
     public email: string;
     public password: string;
@@ -213,6 +214,46 @@ export class User implements IUser {
 
         } catch (error) {
             Log.error(`Error updating last login for user ${userId}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    //change password
+    public static async changePassword(newPassword: string, userId: number): Promise<void> {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const sql = 'UPDATE users SET password = ? WHERE id = ?';
+        try {
+            await Database.pool.execute(sql, [hashedPassword, userId]);
+        } catch (error) {
+            Log.error(`Error changing password for user ${userId}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Xóa người dùng theo ID
+     */
+    public static async deleteById(id: number): Promise<void> {
+        const sql = 'DELETE FROM users WHERE id = ?';
+        try {
+            const [result] = await Database.pool.execute<ResultSetHeader>(sql, [id]);
+            if (result.affectedRows === 0) {
+                throw new Error(`User with ID ${id} not found.`);
+            }
+        } catch (error) {
+            Log.error(`Error deleting user by id: ${error.message}`);
+            throw error;
+        }
+    }
+
+
+    public static async userIdBelongsToSite(userId: number, site: ISite): Promise<boolean> {
+        const sql = 'SELECT COUNT(*) as count FROM users WHERE id = ? AND site_id = ?';
+        try {
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [userId, site.id]);
+            return rows[0].count > 0;
+        } catch (error) {
+            Log.error(`Error checking if user ID ${userId} belongs to site ID ${site.id}: ${error.message}`);
             throw error;
         }
     }

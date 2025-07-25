@@ -4,7 +4,7 @@ import UserCredit from '../../models/UserCredit';
 import Subscription from '../../models/Subscription';
 import Log from '../../middlewares/Log';
 //import getToken from '../../services/getTokenService'; // Import service mới
-
+import { ISite } from '../../models/Site'; // Import interface ISite
 interface AuthenticatedUser {
     id: number;
     email: string;
@@ -18,8 +18,8 @@ class AccountInfoController {
      */
     public static async getInfo(req: Request, res: Response): Promise<Response> {
         const authUser = req.user as unknown as AuthenticatedUser;
-         // Lấy object site (ISite) từ middleware TenantResolver
-        
+        // Lấy object site (ISite) từ middleware TenantResolver
+        const site = req.site as ISite; // Lấy thông tin site từ middleware TenantResolver
 
         try {
             // Sử dụng Promise.all để thực hiện các truy vấn song song, tăng hiệu suất
@@ -59,7 +59,8 @@ class AccountInfoController {
                     name: "Gói Miễn Phí",
                     description: "Bạn đang ở gói mặc định."
                     // Bạn có thể lấy thông tin gói free mặc định từ DB để hiển thị ở đây
-                }
+                },
+                message: req.__('account_info.success')
             };
             //updateLastLogin
             await User.updateLastLogin(authUser.id);

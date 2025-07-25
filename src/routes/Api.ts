@@ -22,7 +22,7 @@ import FlexibleAuthMiddleware from '../middlewares/FlexibleAuthMiddleware'; // <
 import ApiKeyController from '../controllers/Api/ApiKeyController'; // <-- Import controller mới
 import SiteAdminController from '../controllers/Api/Admin/SiteAdminController';
 import AffiliateController from '../controllers/Api/AffiliateController'; // <-- Import controller mới
-
+import AdminMiddleware from '../middlewares/Admin'; // <-- Import middleware mới
 
 const router = Router();
 // --- Public Routes ---
@@ -72,7 +72,7 @@ router.get('/affiliate/withdrawals', FlexibleAuthMiddleware.authenticate, Affili
 // == ADMIN-ONLY ROUTES ==
 const adminRouter = Router();
 // Bạn cần tạo middleware AdminMiddleware.isAdmin để kiểm tra quyền admin của user
-//adminRouter.use(AdminMiddleware.isAdmin); 
+adminRouter.use(AdminMiddleware.authenticate); 
 
 // Route để quản lý các yêu cầu đang chờ xử lý
 adminRouter.get('/transactions/pending', ApprovalController.listPending);
@@ -86,6 +86,9 @@ adminRouter.post('/users/give-credits', ApprovalController.giveCredits);
 adminRouter.post('/users/block', SiteAdminController.blockUser);
 adminRouter.get('/users', SiteAdminController.getAllUsers);
 adminRouter.post('/users/unblock', SiteAdminController.unblockUser);
+//changePassword
+adminRouter.post('/users/change-password', SiteAdminController.changePassword);
+
 
 //affiliates
 // --- Withdrawal Management Routes ---
@@ -93,6 +96,15 @@ adminRouter.get('/withdrawals', ApprovalController.listWithdrawals); // <-- Thay
 adminRouter.get('/withdrawals/pending', ApprovalController.listPendingWithdrawals);
 adminRouter.get('/withdrawals/:requestId', ApprovalController.getWithdrawalDetails); // <-- Route mới
 adminRouter.post('/withdrawals/:requestId/process', ApprovalController.processWithdrawal);
+
+
+// --- THÊM CÁC ROUTE MỚI ĐỂ QUẢN LÝ GÓI DỊCH VỤ ---
+
+adminRouter.get('/subscription-plans', SiteAdminController.getAllSubscriptionPlans);
+adminRouter.post('/subscription-plans', SiteAdminController.createSubscriptionPlan);
+adminRouter.post('/pricing-plans', SiteAdminController.createPricingPlan);
+adminRouter.get('/pricing-plans', SiteAdminController.getAllPricingPlans);
+
 
 // Gắn router của admin vào /api/admin
 router.use('/admin', FlexibleAuthMiddleware.authenticate, adminRouter);
