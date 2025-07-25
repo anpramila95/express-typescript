@@ -1,7 +1,7 @@
 /**
  * Handle all your social auth routesß
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 class Social {

@@ -1,7 +1,7 @@
 /**
  * Define Database connection for MySQL
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com> - Adapted for MySQL
+ * @author SinhThanh <sinhthanh.dev@gmail.com> - Adapted for MySQL
  */
 
 import * as mysql from 'mysql2/promise';

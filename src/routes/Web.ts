@@ -1,7 +1,7 @@
 /**
  * Define all your Web routes
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import * as passport from 'passport';

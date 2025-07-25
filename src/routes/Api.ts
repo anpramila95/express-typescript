@@ -1,7 +1,7 @@
 /**
  * Define all your API web-routes
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { Router } from 'express';

@@ -1,7 +1,7 @@
 /**
  * Define the error & exception handlers
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import Log from '../middlewares/Log';

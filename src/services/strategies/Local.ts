@@ -1,7 +1,7 @@
 /**
  * Define passport's local strategy
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { Strategy } from 'passport-local';

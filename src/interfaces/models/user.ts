@@ -1,7 +1,7 @@
 /**
  * Define interface for User Model
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 export interface Tokens {

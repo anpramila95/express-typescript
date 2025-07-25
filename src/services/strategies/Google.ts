@@ -1,7 +1,7 @@
 /**
  * Define Google OAuth2
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { Strategy } from 'passport-google-oauth20';

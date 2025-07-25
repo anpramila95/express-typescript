@@ -1,7 +1,7 @@
 /**
  * Handles your register route
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import User from '../../models/User';

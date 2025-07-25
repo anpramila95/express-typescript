@@ -1,7 +1,7 @@
 /**
  * Contains all your vendors' types definition
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { IRequest } from './IRequest';

@@ -1,7 +1,7 @@
 /**
  * Bootstrap your App
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import * as os from 'os';

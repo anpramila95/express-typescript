@@ -1,7 +1,7 @@
 /**
  * Sends your verify email
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import * as kue from 'kue';

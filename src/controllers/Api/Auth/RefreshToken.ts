@@ -1,7 +1,7 @@
 /**
  * Refresh JWToken
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com> - Adapted for MySQL
+ * @author SinhThanh <sinhthanh.dev@gmail.com> - Adapted for MySQL
  */
 
 import { Request, Response } from 'express';

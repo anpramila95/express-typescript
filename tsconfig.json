@@ -16,11 +16,6 @@
     "./node_modules/@types/dotenv/index.d.ts",
     "./node_modules/@types/express-session/index.d.ts"
   ],
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "typings/*",
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["typings/*", "node_modules"]
 }

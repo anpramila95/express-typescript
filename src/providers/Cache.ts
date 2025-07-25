@@ -1,7 +1,7 @@
 /**
  * Cung cấp cache middleware và các phương thức cache tĩnh.
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  * @author (Your Name - for modifications)
  */
 

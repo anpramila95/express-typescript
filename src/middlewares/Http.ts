@@ -1,7 +1,7 @@
 /**
  * Defines all the requisites in HTTP
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { Application } from 'express';

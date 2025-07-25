@@ -1,7 +1,7 @@
 /**
  * Handles the logout request
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { IRequest, IResponse } from '../../interfaces/vendors';

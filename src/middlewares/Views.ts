@@ -1,7 +1,7 @@
 /**
  * Defines the view engines
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import * as path from 'path';

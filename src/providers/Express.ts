@@ -1,14 +1,15 @@
 /**
  * Primary file for your Clustered API Server
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import * as express from 'express';
 
 // Use this specific import syntax to ensure compatibility
 import responseTime = require('response-time');
-import * as i18n from 'i18n'; // Thêm dòng này
+import * as i18n from 'i18n';
+
 
 import Locals from './Locals';
 import Routes from './Routes';

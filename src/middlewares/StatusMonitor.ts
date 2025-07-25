@@ -1,7 +1,7 @@
 /**
  * Define & configure your status monitor
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author SinhThanh <sinhthanh.dev@gmail.com>
  */
 
 import { Application } from 'express';

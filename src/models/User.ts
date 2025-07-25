@@ -1,11 +1,10 @@
 /**
  * Define User model for MySQL
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com> - Refactored for MySQL
+ * @author SinhThanh <sinhthanh.dev@gmail.com> - Refactored for MySQL
  */
 
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 import Database from '../providers/Database';
@@ -31,7 +30,7 @@ export class User implements IUser {
     public google: string;
     public github: string;
     public tokens: any[]; // Note: Storing tokens in a TEXT/JSON column is needed
-    public affiliate_id?: number | null; // Optional affiliate ID
+    public affiliate_id: number | null; // Required affiliate ID to match IUser
     public site_id: number; // Required site ID
 
 
@@ -54,6 +53,7 @@ export class User implements IUser {
         this.tokens = typeof user.tokens === 'string' ? JSON.parse(user.tokens) : user.tokens || [];
         this.isAdmin = user.isAdmin || false; // Default to false if not set
         this.last_login = user.last_login || new Date();
+        this.affiliate_id = user.affiliate_id ?? null; // Ensure affiliate_id is always present
         this.site_id = user.site_id;
     }
     public instagram: string;
@@ -77,7 +77,7 @@ export class User implements IUser {
                 filter = ''; // Default to empty string if no filter provided
             }
             filter = filter.trim(); // Trim whitespace from the filter
-            
+
             const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [
                 siteId,
                 `%${filter}%`,
@@ -86,7 +86,7 @@ export class User implements IUser {
                 offset
             ]);
             const users = rows.map(row => new User(row));
-            
+
             // Lấy tổng số người dùng để phân trang
             const countSql = 'SELECT COUNT(*) as total FROM users WHERE site_id = ? AND (email LIKE ? OR fullname LIKE ?)';
             const [countRows] = await Database.pool.query<RowDataPacket[]>(countSql, [siteId, `%${filter}%`, `%${filter}%`]);
@@ -115,14 +115,25 @@ export class User implements IUser {
             return null;
         }
     }
-    
+
     /**
      * Finds a user by its email
      */
-    public static async findOne({ email, site_id }: { email: string, site_id: number }): Promise<User | null> {
-        const sql = 'SELECT * FROM users WHERE email = ? AND site_id = ?';
+    public static async findOne({ email, site_id = null }: { email: string, site_id?: number | null }): Promise<User | null> {
+        // Bắt đầu với câu lệnh SQL cơ bản
+        let sql = 'SELECT * FROM users WHERE email = ?';
+        const params: (string | number)[] = [email];
+
+        // Thêm điều kiện cho site_id một cách linh hoạt
+        if (site_id !== null) {
+            sql += ' AND site_id = ?';
+            params.push(site_id);
+        } else {
+            sql += ' AND site_id IS NULL';
+        }
+
         try {
-            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [email, site_id]);
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, params);
             if (rows.length > 0) {
                 return new User(rows[0]);
             }
