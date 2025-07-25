@@ -3,12 +3,13 @@ import User from '../../models/User';
 import UserCredit from '../../models/UserCredit';
 import Subscription from '../../models/Subscription';
 import Log from '../../middlewares/Log';
-import { ISite } from '../../models/Site'; // << Import interface ISite
+//import getToken from '../../services/getTokenService'; // Import service mới
 
 interface AuthenticatedUser {
     id: number;
     email: string;
     isAdmin?: boolean; // Thêm trường isAdmin để xác định quyền admin
+    site_id?: number;
 }
 
 class AccountInfoController {
@@ -46,9 +47,11 @@ class AccountInfoController {
             userDetails.google = undefined;
             userDetails.github = undefined;
 
+
             // Xây dựng đối tượng phản hồi
             const accountInfo = {
                 user: userDetails,
+                // tokens: await getToken.piclumen(),
                 credits: {
                     balance: creditDetails ? creditDetails : 0
                 },
