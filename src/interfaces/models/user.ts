@@ -9,32 +9,39 @@ export interface Tokens {
 	accessToken: string;
 	tokenSecret?: string;
 }
-
-
 export interface IUser {
-    isAdmin: any;
-	email: string;
-	password: string;
-	passwordResetToken: string;
-	passwordResetExpires: Date;
+    // Thông tin cốt lõi
+    id: number;
+    email: string;
+    password?: string;      // Mật khẩu nên là tùy chọn, không phải lúc nào cũng cần
+    fullname: string;
+    site_id: number;
 
-	facebook: string;
-	twitter: string;
-	google: string;
-	github: string;
-	instagram: string;
-	linkedin: string;
-	tokens: Tokens[];
-	steam: string;
+    // Vai trò & Trạng thái
+    isAdmin: boolean;
+    last_login?: Date;      // Tùy chọn, vì có thể là user mới chưa đăng nhập
 
-	fullname: string;
-	gender: string;
-	geolocation: string;
-	website: string;
-	picture: string;
+    // Thông tin hồ sơ (có thể không bắt buộc)
+    picture?: string;
+    gender?: string;
+    website?: string;
+    geolocation?: string;
 
-	site_id: number;
-	affiliate_id: number;
+    // Liên kết mạng xã hội (tùy chọn)
+    facebook?: string;
+    twitter?: string;
+    google?: string;
+    github?: string;
+    instagram?: string;
+    linkedin?: string;
+    steam?: string;
+
+    // Dành cho chức năng đặc biệt
+    tokens?: Tokens[]; // Mảng các token, có thể là JSON hoặc TEXT trong DB
+    affiliate_id?: number | null; // Có thể là null
+
+    // Dành cho việc reset mật khẩu (chỉ dùng khi cần)
+    passwordResetToken?: string;
+    passwordResetExpires?: Date;
 }
-
 export default IUser;

@@ -15,6 +15,8 @@ import Locals from './Locals';
 import Routes from './Routes';
 import Bootstrap from '../middlewares/Kernel';
 import ExceptionHandler from '../exception/Handler';
+import { resolveTenant } from '../middlewares/TenantResolver'; // << IMPORT MIDDLEWARE MỚI
+
 import I18n from './I18n'; // Thêm dòng này
 
 class Express {
@@ -30,6 +32,7 @@ class Express {
         this.express = express();
         
         this.mountDotEnv();
+        this.mountTenantResolver(); // << GỌI ĐẦU TIÊN
         this.mountI18n(); // Thêm dòng này
         this.mountMiddlewares();
         this.mountRoutes();
@@ -39,6 +42,11 @@ class Express {
     private mountDotEnv (): void {
         this.express = Locals.init(this.express);
     }
+
+     private mountTenantResolver (): void {
+        this.express.use(resolveTenant);
+    }
+
 
      private mountI18n(): void { // Thêm hàm này
         I18n.init();

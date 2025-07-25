@@ -11,12 +11,10 @@ import UserCredit from '../../models/UserCredit'; // Import model UserCredit
 import Queue from '../../providers/Queue'; // Hệ thống hàng đợi đã có
 import Log from '../../middlewares/Log';
 import Locals from '../../providers/Locals';
-
 import SubscriptionService from '../../services/SubscriptionService'; // Import service mới
 
 
 
-// Định nghĩa cấu trúc của người dùng đã được xác thực từ JWT payload
 interface AuthenticatedUser {
     id: number;
     email: string;

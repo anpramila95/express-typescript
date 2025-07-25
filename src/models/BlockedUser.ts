@@ -71,7 +71,7 @@ class BlockedUser {
         }
     }
     public static async findBlockDetails(userId: number): Promise<IBlockDetails | null> {
-        const sql = 'SELECT * FROM blocked_users WHERE site_id = ? AND user_id = ? LIMIT 1';
+        const sql = 'SELECT * FROM blocked_users WHERE user_id = ? LIMIT 1';
         try {
             const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [userId]);
             return rows.length > 0 ? (rows[0] as IBlockDetails) : null;

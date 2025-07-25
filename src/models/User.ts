@@ -102,10 +102,15 @@ export class User implements IUser {
     /**
      * Finds a user by its id
      */
-    public static async findById(id: number): Promise<User | null> {
-        const sql = 'SELECT * FROM users WHERE id = ?';
+    public static async findById(id: number, site_id?: number): Promise<User | null> {
+        let sql = 'SELECT * FROM users WHERE id = ?';
+        const params: (string | number)[] = [id];
+        if (site_id !== undefined) {
+            sql += ' AND site_id = ?';
+            params.push(site_id);
+        }
         try {
-            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [id]);
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, params);
             if (rows.length > 0) {
                 return new User(rows[0]);
             }
@@ -155,8 +160,8 @@ export class User implements IUser {
         }
 
         const sql = `
-            INSERT INTO users (email, password, fullname, gender, geolocation, website, picture, google, twitter, tokens)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (email, password, fullname, gender, geolocation, website, picture, google, twitter, tokens, affiliate_id, site_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 fullname = VALUES(fullname),
                 gender = VALUES(gender),
@@ -165,11 +170,14 @@ export class User implements IUser {
                 picture = VALUES(picture),
                 google = VALUES(google),
                 twitter = VALUES(twitter),
-                tokens = VALUES(tokens)
+                tokens = VALUES(tokens),
+                affiliate_id = VALUES(affiliate_id),
+                site_id = VALUES(site_id)
         `;
         const params = [
             this.email, this.password, this.fullname, this.gender, this.geolocation,
-            this.website, this.picture, this.google, this.twitter, JSON.stringify(this.tokens)
+            this.website, this.picture, this.google, this.twitter, JSON.stringify(this.tokens),
+            this.affiliate_id, this.site_id
         ];
 
         try {
@@ -185,6 +193,7 @@ export class User implements IUser {
             throw error;
         }
     }
+
 
     /**ffindOn
      * Compare password

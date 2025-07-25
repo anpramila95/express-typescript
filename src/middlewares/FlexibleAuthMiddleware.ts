@@ -2,16 +2,34 @@ import { Request, Response, NextFunction } from "express";
 import * as jwt from "jsonwebtoken";
 import Locals from "../providers/Locals";
 import ApiKey from "../models/ApiKey";
-import Site from "../models/Site";
+import Site, { ISite } from '../models/Site'; // Import model và interface ISite của bạn
 import Log from "./Log";
 import { default as StaticCache } from '../providers/Cache'; // Import với tên khác để rõ ràng
 
 class FlexibleAuthMiddleware {
+  private static async checkSiteAndUser(site: { id: any; user_id: any; }, user: { site_id: any; id: any; }) {
+    
+    if (!site) {
+      Log.error("Site not found for the request.");
+      throw new Error("Site not found.");
+    }
+
+    if (!user) {
+      Log.error("User not found for the request.");
+      throw new Error("User not found.");
+    }
+
+    // Kiểm tra xem user có thuộc về site này không
+    if (user.site_id !== site.id && user.id !== site.user_id ) {
+      Log.warn(`User ID ${user.id} does not belong to site ID ${site.id}.`);
+      throw new Error("User does not belong to this site.");
+    }
+  }
   /**
    * Helper riêng để lấy thông tin site, có tích hợp cache.
    * Dữ liệu site sẽ được cache trong 1 giờ.
    */
-  private static async _getAndCacheSiteInfo(domain: string): Promise<any> {
+  private static async _getAndCacheSiteInfo(domain: string): Promise<ISite | null> {
     const cacheKey = `site_info_${domain}`;
 
     // Thử lấy từ cache trước
@@ -29,7 +47,7 @@ class FlexibleAuthMiddleware {
       StaticCache.set(cacheKey, site, 3600);
     }
 
-    return site;
+    return site as ISite | null;
   }
 
   /**
@@ -44,10 +62,8 @@ class FlexibleAuthMiddleware {
     
     // <-- 2. Sử dụng helper để lấy thông tin site
     const site = await FlexibleAuthMiddleware._getAndCacheSiteInfo(domain);
-    if (!site) {
-      return res.status(404).json({ error: "Site not found." });
-    }
-    req.site = site; // Gắn thông tin site vào req
+    
+    (req as any).site = site;
 
     // --- Bước 1: Thử xác thực bằng Access Token (JWT) ---
     const authHeader = req.header("Authorization");
@@ -56,7 +72,9 @@ class FlexibleAuthMiddleware {
 
       try {
         const decoded = jwt.verify(token, Locals.config().appSecret);
-        req.user = decoded;
+        (req as any).user = decoded;
+        //check userid and site checkSiteAndUser
+        await FlexibleAuthMiddleware.checkSiteAndUser(site, decoded);
         Log.info("Request authenticated with JWT.");
         return next();
       } catch (err) {
@@ -68,9 +86,10 @@ class FlexibleAuthMiddleware {
     const apiKey = req.header("x-api-key");
     if (apiKey) {
       try {
-        const authenticatedUser = await ApiKey.findByKey(apiKey, site.id); // <-- Thêm site.id để tăng bảo mật
+        const authenticatedUser = await ApiKey.findByKey(apiKey); // <-- Thêm site.id để tăng bảo mật
         if (authenticatedUser) {
-          req.user = authenticatedUser;
+          (req as any).user = authenticatedUser;
+          await FlexibleAuthMiddleware.checkSiteAndUser(site, authenticatedUser);
           Log.info("Request authenticated with API Key.");
           return next();
         }
@@ -83,39 +102,6 @@ class FlexibleAuthMiddleware {
     return res.status(401).json({ error: "Unauthorized: Authentication is required." });
   }
 
-  public static async authorizeAdminSite(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<any> {
-    const user = req.user as any;
-    if (!user) {
-        return res.status(401).json({ error: "Unauthorized: Authentication required." });
-    }
-
-    // Admin toàn cục có quyền truy cập mọi site
-    if (user.isAdmin) {
-      return next();
-    }
-    
-    // Nếu req.site đã được middleware `authenticate` gắn vào thì dùng lại,
-    // nếu không thì lấy lại (có cache)
-    if (!req.site) {
-        const domain = req.hostname;
-        const site = await FlexibleAuthMiddleware._getAndCacheSiteInfo(domain);
-        if (!site) {
-            return res.status(404).json({ error: "Site not found." });
-        }
-        req.site = site;
-    }
-    
-    // Kiểm tra xem user có phải là chủ sở hữu của site này không
-    if (req.site.user_id !== user.id) {
-        return res.status(403).json({ error: "Forbidden: You do not have admin access to this site." });
-    }
-
-    return next();
-  }
 }
 
 export default FlexibleAuthMiddleware;

@@ -3,6 +3,7 @@ import User from '../../models/User';
 import UserCredit from '../../models/UserCredit';
 import Subscription from '../../models/Subscription';
 import Log from '../../middlewares/Log';
+import { ISite } from '../../models/Site'; // << Import interface ISite
 
 interface AuthenticatedUser {
     id: number;
@@ -16,6 +17,8 @@ class AccountInfoController {
      */
     public static async getInfo(req: Request, res: Response): Promise<Response> {
         const authUser = req.user as unknown as AuthenticatedUser;
+         // Lấy object site (ISite) từ middleware TenantResolver
+        
 
         try {
             // Sử dụng Promise.all để thực hiện các truy vấn song song, tăng hiệu suất

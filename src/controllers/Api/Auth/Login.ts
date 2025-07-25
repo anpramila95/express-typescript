@@ -8,7 +8,7 @@ import * as jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
 
 import User from '../../../models/User';
-import Site from '../../../models/Site';
+import Site, {ISite} from '../../../models/Site';
 import BlockedUser from '../../../models/BlockedUser'; // <-- 1. Import model BlockedUser
 import Log from '../../../middlewares/Log';
 
@@ -30,13 +30,7 @@ class Login {
             const email = req.body.email.toLowerCase();
             const password = req.body.password;
 
-            const site = await Site.findByDomain(req.hostname);
-
-            if (!site) {
-                return res.status(404).json({
-                    error: 'Site not found!'
-                });
-            }
+            const site = (req as any).site as ISite; 
 
             const user = await User.findOne({ email: email, site_id: site.id });
             if (!user) {
@@ -45,7 +39,7 @@ class Login {
                 });
             }
 
-            // <-- 2. Thêm logic kiểm tra khóa người dùng
+
             // --- Logic kiểm tra khóa đã được cập nhật ---
             const blockDetails = await BlockedUser.findBlockDetails(user.id);
             if (blockDetails) {
@@ -93,7 +87,6 @@ class Login {
             user.tokens = undefined;
 
             return res.json({
-                user,
                 token,
                 token_expires_in: res.locals.app.jwtExpiresIn * 60
             });
