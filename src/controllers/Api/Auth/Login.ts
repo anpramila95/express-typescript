@@ -5,12 +5,13 @@
  */
 
 import * as jwt from 'jsonwebtoken';
-import { IRequest, IResponse } from '../../../interfaces/vendors';
+import { Request, Response } from 'express';
+
 import User from '../../../models/User';
 import Log from '../../../middlewares/Log';
 
 class Login {
-	public static async perform (req: IRequest, res: IResponse): Promise<any> {
+	public static async perform (req: Request, res: Response): Promise<any> {
 		req.assert('email', 'E-mail cannot be blank').notEmpty();
 		req.assert('email', 'E-mail is not valid').isEmail();
 		req.assert('password', 'Password cannot be blank').notEmpty();
@@ -46,8 +47,11 @@ class Login {
 				});
 			}
 
+			// Lấy giá trị isAdmin từ đối tượng user trong database
+            const isAdmin = user.isAdmin ? true : false;
+
 			const token = jwt.sign(
-				{ email: user.email, id: user.id },
+				{ email: user.email, id: user.id, isAdmin: isAdmin},
 				res.locals.app.appSecret,
 				{ expiresIn: res.locals.app.jwtExpiresIn * 60 }
 			);

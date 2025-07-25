@@ -17,20 +17,21 @@ import MediaController from '../controllers/Api/MediaController'; // Import the 
 import PlanController from '../controllers/Api/PlanController';
 import CreditController from '../controllers/Api/CreditController';
 import ApprovalController from '../controllers/Api/Admin/ApprovalController';
-
+import AdminMiddleware from '../middlewares/Admin'; // Import the admin middleware
+import TransactionController from '../controllers/Api/TransactionController';
+import AccountInfoController from '../controllers/Api/AccountInfoController';
 
 
 const router = Router();
-
-router.get('/', HomeController.index);
-
-router.post('/auth/login', (req, res, next) => LoginController.perform(req, res, next));
-router.post('/auth/register', (req, res, next) => RegisterController.perform(req, res, next));
+// --- Public Routes ---
+router.post('/auth/login', LoginController.perform);
+router.post('/auth/register', RegisterController.perform);
 router.post('/auth/refresh-token', expressJwt({ secret: Locals.config().appSecret }), RefreshTokenController.perform);
 
 
 // Configure JWT Middleware
 const checkAuth = expressJwt({ secret: Locals.config().appSecret, algorithms: ['HS256'] });
+console.log('JWT Middleware configured with secret:', checkAuth);
 // Configure Multer for file uploads
 const upload = multer({ dest: 'public/uploads/' }); // Configure your upload destination
 
@@ -42,26 +43,35 @@ router.post('/media/import', checkAuth, MediaController.importVideo);
 router.delete('/media/:id', checkAuth, MediaController.delete);
 router.post('/media/gen-ai', checkAuth, MediaController.generateAi);
 
+router.get('/account/info', checkAuth, AccountInfoController.getInfo); // <-- Route mới
 
-
-// --- USER-FACING ROUTES ---
-// Lấy danh sách các gói
 router.get('/plans', PlanController.listPlans);
 router.get('/credit-packages', CreditController.listPackages);
 
-// Gửi yêu cầu (cần đăng nhập)
+
+// == USER AUTHENTICATED ROUTES ==
 router.post('/plans/request-upgrade', checkAuth, PlanController.requestUpgrade);
 router.post('/credits/request-purchase', checkAuth, CreditController.requestPurchase);
+router.get('/transactions/:transactionId', checkAuth, TransactionController.getDetails);
+router.get('/transactions', checkAuth, TransactionController.findAll);
 
-// --- ADMIN-ONLY ROUTES ---
-// Giả sử bạn có một middleware `AdminMiddleware.isAdmin` để bảo vệ các route này
+// == ADMIN-ONLY ROUTES ==
 const adminRouter = Router();
-adminRouter.get('/requests/pending', ApprovalController.listPendingRequests);
-adminRouter.post('/requests/upgrade/:requestId/approve', ApprovalController.approveUpgrade);
-adminRouter.post('/requests/purchase/:requestId/approve', ApprovalController.approvePurchase);
-adminRouter.post('/requests/:type/:requestId/reject', ApprovalController.rejectRequest);
+// Bạn cần tạo middleware AdminMiddleware.isAdmin để kiểm tra quyền admin của user
+// adminRouter.use(AdminMiddleware.isAdmin); 
 
-// Gắn router của admin vào một prefix riêng, ví dụ: /api/admin
-router.use('/admin', checkAuth, /* AdminMiddleware.isAdmin, */ adminRouter);
+adminRouter.use(AdminMiddleware.isAdmin);
+
+// Route để quản lý các yêu cầu đang chờ xử lý
+adminRouter.get('/transactions/pending', ApprovalController.listPending);
+adminRouter.post('/transactions/:transactionId/approve', ApprovalController.approvePending);
+adminRouter.post('/transactions/:transactionId/reject', ApprovalController.rejectPending);
+
+// Route để admin tự thực hiện hành động (không qua yêu cầu)
+adminRouter.post('/users/assign-subscription', ApprovalController.assignSubscription);
+adminRouter.post('/users/give-credits', ApprovalController.giveCredits);
+
+// Gắn router của admin vào /api/admin
+router.use('/admin', checkAuth, adminRouter);
 
 export default router;

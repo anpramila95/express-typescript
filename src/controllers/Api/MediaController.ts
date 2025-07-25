@@ -88,7 +88,8 @@ class MediaController {
         }
 
         const file = req.file;
-        const fileUrl = `/uploads/${file.filename}`;
+        const extension = file.originalname.split('.').pop()?.toLowerCase();
+        const fileUrl = `/uploads/${file.filename}.${extension}`;
 
         const mediaData: Omit<IMedia, 'id' | 'created_at'> = {
             user_id: user.id,
@@ -128,6 +129,7 @@ class MediaController {
             return res.status(400).json({ error: 'Vui lòng cung cấp videoUrl.' });
         }
 
+        
         try {
             const nodejsUrl = Locals.config().nodejsUrl; // Giả sử bạn đã thêm nodejsUrl vào Locals
             const response = await axios.post(`${nodejsUrl}/import-video`, { videoUrl });

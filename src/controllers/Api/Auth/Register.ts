@@ -4,13 +4,13 @@
  * @author Faiz A. Farooqui <faiz@geekyants.com>
  */
 
-import { IRequest, IResponse } from '../../../interfaces/vendors';
+import { Request, Response } from 'express';
 import User from '../../../models/User';
 import Log from '../../../middlewares/Log';
 
 
 class Register {
-	public static async perform (req: IRequest, res: IResponse): Promise<any> {
+	public static async perform (req: Request, res: Response): Promise<any> {
 		req.assert('email', 'E-mail cannot be blank').notEmpty();
 		req.assert('email', 'E-mail is not valid').isEmail();
 		req.assert('password', 'Password cannot be blank').notEmpty();

@@ -13,7 +13,7 @@ class Worker {
 
         // Đăng ký handler cho job 'generate-ai-media'
         // Số '3' nghĩa là worker này có thể xử lý 3 job cùng một lúc.
-        Queue.process('generate-ai-media', 3, MediaHandler.process);
+        Queue.process('generate-ai-media', 3, MediaHandler.runProccessing);
 
         // Đăng ký các jobs khác ở đây nếu có
         // Queue.process('send-welcome-email', 10, EmailHandler.process);

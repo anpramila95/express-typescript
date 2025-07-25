@@ -24,11 +24,15 @@ export class User implements IUser {
     public picture: string;
     public passwordResetToken: string;
     public passwordResetExpires: Date;
+    public last_login?: Date;
     public facebook: string;
     public twitter: string;
+    public isAdmin: boolean = false; // Default to false, can be set laters
     public google: string;
     public github: string;
     public tokens: any[]; // Note: Storing tokens in a TEXT/JSON column is needed
+    public affiliate_id?: number | null; // Optional affiliate ID
+    public referral_id?: string;
 
     constructor(user: any) {
         this.id = user.id;
@@ -47,10 +51,12 @@ export class User implements IUser {
         this.github = user.github || '';
         // Assuming tokens are stored as a JSON string in the database
         this.tokens = typeof user.tokens === 'string' ? JSON.parse(user.tokens) : user.tokens || [];
+        this.isAdmin = user.isAdmin || false; // Default to false if not set
+        this.last_login = user.last_login || new Date();
     }
     public instagram: string;
     public linkedin: string;
-    steam: string;
+    public steam: string;
 
     /**
      * Finds a user by its id
@@ -128,7 +134,7 @@ export class User implements IUser {
         }
     }
 
-    /**
+    /**ffindOn
      * Compare password
      */
     public async comparePassword(password: string): Promise<boolean> {
@@ -136,6 +142,18 @@ export class User implements IUser {
             return false;
         }
         return bcrypt.compare(password, this.password);
+    }
+
+    //update last login
+    public static async updateLastLogin(userId: number): Promise<void> {
+        const sql = 'UPDATE users SET last_login = NOW() WHERE id = ?';
+        try {
+            await Database.pool.execute(sql, [userId]);
+
+        } catch (error) {
+            Log.error(`Error updating last login for user ${userId}: ${error.message}`);
+            throw error;
+        }
     }
 }
 

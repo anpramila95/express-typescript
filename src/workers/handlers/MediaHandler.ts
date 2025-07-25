@@ -11,7 +11,7 @@ class MediaHandler {
     /**
      * Xử lý công việc 'generate-ai-media'
      */
-    public static async process({ data }): Promise<void> {
+    public static async runProccessing({ data }): Promise<void> {
         const { mediaId, userId } = data;
         Log.info(`[Worker] Bắt đầu xử lý job 'generate-ai-media' cho mediaId: ${mediaId}`);
 

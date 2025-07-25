@@ -4,7 +4,7 @@
  * @author Faiz A. Farooqui <faiz@geekyants.com> - Adapted for MySQL
  */
 
-import { IRequest, IResponse } from '../../../interfaces/vendors';
+import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import User from '../../../models/User';
 import Log from '../../../middlewares/Log';
@@ -17,7 +17,7 @@ interface ITokenPayload {
 }
 
 class RefreshToken {
-    public static async perform(req: IRequest, res: IResponse): Promise<any> {
+    public static async perform(req: Request, res: Response): Promise<any> {
         // req.user is populated by express-jwt middleware
         const decoded = req.user as unknown as ITokenPayload;
 

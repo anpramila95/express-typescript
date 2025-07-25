@@ -1,22 +1,21 @@
 import { Request, Response } from 'express';
-// Import các model cần thiết
-import UpgradeRequest from '../../models/UpgradeRequest'; // Bạn sẽ cần tạo model này
-import SubscriptionPlan from '../../models/SubscriptionPlan'; // Bạn sẽ cần tạo model này
+import SubscriptionPlan from '../../models/SubscriptionPlan';
+import Transaction from '../../models/Transaction'; // <-- Thay đổi
 
 interface AuthenticatedUser { id: number; email: string; }
 
 class PlanController {
-    // Lấy danh sách các gói subscription
+    /**
+     * Lấy danh sách các gói subscription để người dùng chọn.
+     */
     public static async listPlans(req: Request, res: Response): Promise<Response> {
-        const plans = await SubscriptionPlan.findAll(); // Lấy từ DB
-        return res.json({
-            message: 'Danh sách gói subscription đã được lấy thành công.',
-            success: true,
-            data: plans
-        });
+        const plans = await SubscriptionPlan.findAll();
+        return res.json(plans);
     }
 
-    // Người dùng gửi yêu cầu nâng cấp gói
+    /**
+     * Người dùng gửi yêu cầu nâng cấp gói.
+     */
     public static async requestUpgrade(req: Request, res: Response): Promise<Response> {
         const user = req.user as unknown as AuthenticatedUser;
         const { planId } = req.body;
@@ -25,14 +24,15 @@ class PlanController {
             return res.status(400).json({ error: 'Vui lòng chọn một gói.' });
         }
 
-        // Tùy chọn: Kiểm tra xem người dùng có yêu cầu nào đang chờ không
-        const existingRequest = await UpgradeRequest.findPendingRequest(user.id);
-        if (existingRequest) {
-            return res.status(409).json({ error: 'Bạn đã có một yêu cầu đang chờ xử lý.' });
+        const plan = await SubscriptionPlan.findById(planId);
+        if (!plan) {
+            return res.status(404).json({ error: 'Gói dịch vụ không tồn tại.' });
         }
 
-        await UpgradeRequest.create({ user_id: user.id, plan_id: planId });
-        return res.status(201).json({ message: 'Yêu cầu của bạn đã được gửi đi và đang chờ xét duyệt.' });
+        await Transaction.createSubscriptionRequest(user.id, plan);
+
+        return res.status(201).json({ message: 'Yêu cầu nâng cấp của bạn đã được gửi và đang chờ xét duyệt.' });
     }
 }
+
 export default PlanController;

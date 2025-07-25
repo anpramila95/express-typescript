@@ -47,7 +47,7 @@ class Queue {
 		});
 	}
 
-	private process (_jobName: string, _count: number, _callback: Function): void {
+	public process (_jobName: string, _count: number, _callback: Function): void {
 		this.jobs.process(_jobName, _count, (_job, _done) => {
 			_done(); // Notifies KUE about the completion of the job!
 

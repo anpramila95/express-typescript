@@ -47,6 +47,45 @@ export class Media {
         }
     }
 
+    public static async update(id: number, data: Partial<IMedia>): Promise<void> {
+        const sql = `UPDATE medias SET 
+            user_id = ?,
+            kol_id = ?,
+            url = ?,
+            thumbnail_url = ?,
+            filePath = ?,
+            size = ?,
+            name = ?,
+            type = ?,
+            status = ?,
+            meta = ?,
+            updated_at = NOW()
+            WHERE id = ?`; 
+        // Ensure meta is a JSON string
+        const metaString = (data.meta && typeof data.meta === 'object')
+            ? JSON.stringify(data.meta)
+            : data.meta;
+        const params = [
+            data.user_id || null,
+            data.kol_id || null,
+            data.url || null,
+            data.thumbnail_url || null, 
+            data.filePath || null,
+            data.size || 0,
+            data.name || null,
+            data.type || null,
+            data.status || null,
+            metaString || null,
+            id
+        ];
+        try {
+            await Database.pool.execute<mysql.ResultSetHeader>(sql, params);
+        } catch (error) {
+            Log.error(`Error updating media: ${error.message}`);
+            throw error;
+        }
+    }
+
     /**
      * Creates a new media record in the database.
      */
