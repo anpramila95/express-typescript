@@ -1,88 +1,59 @@
 /**
  * Refresh JWToken
  *
- * @author Faiz A. Farooqui <faiz@geekyants.com>
+ * @author Faiz A. Farooqui <faiz@geekyants.com> - Adapted for MySQL
  */
 
+import { IRequest, IResponse } from '../../../interfaces/vendors';
 import * as jwt from 'jsonwebtoken';
-
 import User from '../../../models/User';
+import Log from '../../../middlewares/Log';
+
+interface ITokenPayload {
+    id: number;
+    email: string;
+    iat: number;
+    exp: number;
+}
 
 class RefreshToken {
-	public static getToken (req): string {
-		if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
-			return req.headers.authorization.split(' ')[1];
-		} else if (req.query && req.query.token) {
-			return req.query.token;
-		}
+    public static async perform(req: IRequest, res: IResponse): Promise<any> {
+        // req.user is populated by express-jwt middleware
+        const decoded = req.user as unknown as ITokenPayload;
 
-		return '';
-	}
+        if (!decoded || !decoded.id) {
+            return res.status(401).json({ error: 'Invalid token payload!' });
+        }
 
-	public static perform (req, res): any {
-		const _token = RefreshToken.getToken(req);
-		if (_token === '') {
-			return res.json({
-				error: ['Invalid Token!']
-			});
-		}
+        try {
+            const user = await User.findById(decoded.id);
 
-		const decode = jwt.decode(
-			_token,
-			res.locals.app.appSecret,
-			{ expiresIn: res.locals.app.jwtExpiresIn }
-		);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found!' });
+            }
 
-		User.findOne({email: decode.email}, (err, user) => {
-			if (err) {
-				return res.json({
-					error: err
-				});
-			}
+            // Create a new token
+            const newToken = jwt.sign(
+                { id: user.id, email: user.email },
+                res.locals.app.appSecret,
+                { expiresIn: res.locals.app.jwtExpiresIn * 60 }
+            );
 
-			if (! user) {
-				return res.json({
-					error: ['User not found!']
-				});
-			}
+            // Hide protected columns before sending response
+            user.password = undefined;
+            user.tokens = undefined;
 
-			if (! user.password) {
-				return res.json({
-					error: ['Please login using your social creds']
-				});
-			}
+            return res.status(200).json({
+                user,
+                token: newToken,
+                token_expires_in: res.locals.app.jwtExpiresIn * 60
+            });
 
-			user.comparePassword(decode.password, (err, isMatch) => {
-				if (err) {
-					return res.json({
-						error: err
-					});
-				}
-
-				if (! isMatch) {
-					return res.json({
-						error: ['Password does not match!']
-					});
-				}
-
-				const token = jwt.sign(
-					{ email: decode.email, password: decode.password },
-					res.locals.app.appSecret,
-					{ expiresIn: res.locals.app.jwtExpiresIn * 60 }
-				);
-
-				// Hide protected columns
-				user.tokens = undefined;
-				user.password = undefined;
-
-				return res.json({
-					user,
-					token,
-					token_expires_in: res.locals.app.jwtExpiresIn * 60
-				});
-			});
-		});
-	}
+        } catch (error) {
+            Log.error(error.message);
+            return res.status(500).json({ error: 'Failed to refresh token.' });
+        }
+    }
 }
 
 export default RefreshToken;

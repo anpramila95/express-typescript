@@ -5,6 +5,9 @@
   "main": "dist",
   "dependencies": {
     "@types/bluebird": "^3.5.24",
+    "@types/multer": "^2.0.0",
+    "axios": "^1.11.0",
+    "bcrypt": "^6.0.0",
     "bcrypt-nodejs": "0.0.3",
     "bluebird": "^3.5.2",
     "body-parser": "^1.18.3",
@@ -17,6 +20,7 @@
     "express": "^4.18.2",
     "express-flash": "0.0.2",
     "express-jwt": "^5.3.1",
+    "express-mysql-session": "^3.0.3",
     "express-session": "^1.15.6",
     "express-status-monitor": "^1.2.3",
     "express-validator": "^5.3.0",
@@ -31,6 +35,8 @@
     "memory-cache": "^0.2.0",
     "mongodb": "^5.1.0",
     "mongoose": ">=6.4.6",
+    "multer": "^2.0.2",
+    "mysql2": "^3.14.2",
     "passport": ">=0.6.0",
     "passport-facebook": "^2.1.1",
     "passport-github": "^1.1.0",
@@ -65,8 +71,8 @@
     "dev": "tsc --watch & NODE_ENV=development nodemon dist",
     "test": "tsc && ./node_modules/.bin/mocha dist/**/*.spec.js",
     "lint": "tslint 'src/**/*.ts' --fix",
-    "clean":"rm -rf dist/ .logs/",
-    "start":"node dist"
+    "clean": "rm -rf dist/ .logs/",
+    "start": "node dist"
   },
   "author": "Faiz A. Farooqui <faiz@geekyants.com>",
   "license": "ISC"

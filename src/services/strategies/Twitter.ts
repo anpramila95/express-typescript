@@ -15,64 +15,54 @@ class Twitter {
 			consumerSecret: process.env.TWITTER_SECRET,
 			callbackURL: `${Locals.config().url}/auth/twitter/callback`,
 			passReqToCallback: true
-		}, (req, accessToken, tokenSecret, profile, done) => {
-			if (req.user) {
-				User.findOne({ twitter: profile.id }, (err, existingUser) => {
-					if (err) {
-						return done(err);
+		}, async (req, accessToken, tokenSecret, profile, done) => {
+            try {
+                const twitterId = profile.id;
+
+                if (req.user) { // User is logged in, link accounts
+                    const loggedInUser = req.user as User;
+                    const existingUser = await User.findOne({ email: `twitter:${twitterId}`});
+
+                    if (existingUser) {
+						req.flash('errors', { msg: 'There is already a Twitter account that belongs to you.' });
+						return done(null, false);
 					}
 
-					if (existingUser) {
-						req.flash('errors', { msg: 'There is already a Twitter account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
-						return done(err);
-					} else {
-						User.findById(req.user.id, (err, user) => {
-							if (err) {
-								return done(err);
-							}
+                    const userToUpdate = await User.findById(loggedInUser.id);
+                     if(!userToUpdate) {
+                        return done(null, false, { msg: "User not found."});
+                    }
 
-							user.twitter = profile.id;
-							user.tokens.push({ kind: 'twitter', accessToken, tokenSecret });
-							user.fullname = user.fullname || profile.displayName;
-							user.geolocation = user.geolocation || profile._json.location;
-							user.picture = user.picture || profile._json.profile_image_url_https;
-							user.save((err) => {
-								if (err) {
-									return done(err);
-								}
+                    userToUpdate.twitter = twitterId;
+                    userToUpdate.tokens.push({ kind: 'twitter', accessToken, tokenSecret });
+                    userToUpdate.fullname = userToUpdate.fullname || profile.displayName;
+                    userToUpdate.picture = userToUpdate.picture || profile._json.profile_image_url_https;
+                    await userToUpdate.save();
 
-								req.flash('info', { msg: 'Twitter account has been linked.' });
-								return done(err, user);
-							});
-						});
-					}
-				});
-			} else {
-				User.findOne({ twitter: profile.id }, (err, existingUser) => {
-					if (err) {
-						return done(err);
-					}
+                    req.flash('info', { msg: 'Twitter account has been linked.' });
+					return done(null, userToUpdate);
 
-					if (existingUser) {
-						return done(null, existingUser);
-					}
+                } else { // User is not logged in, login or register
+                    let user = await User.findOne({ email: `twitter:${twitterId}` });
+                    if(user) {
+                        return done(null, user);
+                    }
 
-					const user = new User();
-					// Twitter does not provides the user's e-mail address.
-					// We can "fake" a twitter email address as follows:
-					user.email = `${profile.username}@twitter.com`;
-					user.twitter = profile.id;
-					user.tokens.push({ kind: 'twitter', accessToken, tokenSecret });
-					user.fullname = profile.displayName;
-					user.geolocation = profile._json.location;
-					user.picture = profile._json.profile_image_url_https;
-					user.save().then(() => {
-						return done(user);
-					}).catch((error) => {
-						return done(error);
-					});
-				});
-			}
+                    // Twitter does not provide an email, so we create a fake one
+                    const newUser = new User({
+                        email: `${profile.username}@twitter.com`,
+                        twitter: twitterId,
+                        tokens: [{ kind: 'twitter', accessToken, tokenSecret }],
+                        fullname: profile.displayName,
+                        picture: profile._json.profile_image_url_https
+                    });
+
+                    await newUser.save();
+                    return done(null, newUser);
+                }
+            } catch (err) {
+                return done(err);
+            }
 		}));
 	}
 }

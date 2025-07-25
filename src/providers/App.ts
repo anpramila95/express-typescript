@@ -12,6 +12,7 @@ import Express from './Express';
 import { Database } from './Database';
 
 import Queue from './Queue';
+import Worker from '../workers'; // Import worker của bạn
 import Locals from './Locals';
 import Log from '../middlewares/Log';
 
@@ -49,6 +50,7 @@ class App {
 	// Loads the Worker Cluster
 	public loadWorker (): void {
 		Log.info('Worker :: Booting @ Master...');
+		Worker.init(); // Gọi hàm init của worker
 	}
 
 	// Loads the Queue Monitor

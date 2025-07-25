@@ -14,7 +14,7 @@ class Register {
 		});
 	}
 
-	public static perform (req: IRequest, res: IResponse, next: INext): any {
+	public static async perform (req: IRequest, res: IResponse, next: INext): Promise<any> {
 		req.assert('email', 'E-mail cannot be blank').notEmpty();
 		req.assert('email', 'E-mail is not valid').isEmail();
 		req.assert('password', 'Password cannot be blank').notEmpty();
@@ -29,34 +29,36 @@ class Register {
 			return res.redirect('/signup');
 		}
 
-		const user = new User({
-			email: req.body.email,
-			password: req.body.password
-		});
-
-		User.findOne({ email: req.body.email }, (err, existingUser) => {
-			if (err) {
-				return next(err);
-			}
-
+		try {
+			const existingUser = await User.findOne({ email: req.body.email });
 			if (existingUser) {
-				req.flash('errors', { msg: 'Account with the e-mail address already exists.' });
+				req.flash('errors', { msg: 'Account with that e-mail address already exists.' });
 				return res.redirect('/signup');
 			}
 
-			user.save()
-				.then(() => {
-					req.logIn(user, (err) => {
-						if (err) {
-							return next(err);
-						}
-						req.flash('success', { msg: 'You are successfully logged in now!' });
-						res.redirect('/signup');
-					});
-			}).catch((error) => {
-				return next(error);
+			console.log('Creating new user with email:', req.body.email, req.body.password);
+			// Create a new user instance
+
+			const user = new User({
+				email: req.body.email,
+				password: req.body.password
 			});
-		});
+
+			await user.save();
+
+			req.logIn(user, (err) => {
+				if (err) {
+					return next(err);
+				}
+				req.flash('success', { msg: 'You are successfully logged in!' });
+				res.redirect('/account');
+			});
+		} catch (error) {
+			console.log('Error during registration:', error);
+			req.flash('errors', { msg: 'An error occurred while registering your account. Please try again later.' });
+
+			return res.redirect('/signup');
+		}
 	}
 }
 

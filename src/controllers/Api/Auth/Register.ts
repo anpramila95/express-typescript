@@ -4,56 +4,53 @@
  * @author Faiz A. Farooqui <faiz@geekyants.com>
  */
 
+import { IRequest, IResponse } from '../../../interfaces/vendors';
 import User from '../../../models/User';
+import Log from '../../../middlewares/Log';
+
 
 class Register {
-	public static perform (req, res): any {
+	public static async perform (req: IRequest, res: IResponse): Promise<any> {
 		req.assert('email', 'E-mail cannot be blank').notEmpty();
 		req.assert('email', 'E-mail is not valid').isEmail();
 		req.assert('password', 'Password cannot be blank').notEmpty();
-		req.assert('password', 'Password length must be atleast 8 characters').isLength({ min: 8 });
+		req.assert('password', 'Password length must be at least 8 characters').isLength({ min: 8 });
 		req.assert('confirmPassword', 'Confirmation Password cannot be blank').notEmpty();
 		req.assert('confirmPassword', 'Password & Confirmation password does not match').equals(req.body.password);
 		req.sanitize('email').normalizeEmail({ gmail_remove_dots: false });
 
 		const errors = req.validationErrors();
 		if (errors) {
-			return res.json({
-				error: errors
-			});
+			return res.status(400).json({ errors });
 		}
 
-		const _email = req.body.email;
-		const _password = req.body.password;
+		try {
+			const email = req.body.email;
 
-		const user = new User({
-			email: _email,
-			password: _password
-		});
-
-		User.findOne({ email: _email }, (err, existingUser) => {
-			if (err) {
-				return res.json({
-					error: err
-				});
-			}
-
+			const existingUser = await User.findOne({ email });
 			if (existingUser) {
-				return res.json({
-					error: ['Account with the e-mail address already exists.']
+				return res.status(409).json({
+					error: 'Account with this e-mail address already exists.'
 				});
 			}
 
-			user.save().then((user) => {
-				return res.json({
-					message: ['You have been successfully registered with us!']
-				});
-			}).catch((err) => {
-				return res.json({
-						error: err
-					});
+			const user = new User({
+				email: email,
+				password: req.body.password
 			});
-		});
+
+			await user.save();
+
+			return res.json({
+				message: 'You have been successfully registered!'
+			});
+
+		} catch (err) {
+            Log.error(err.message);
+			return res.status(500).json({
+				error: err.message
+			});
+		}
 	}
 }
 

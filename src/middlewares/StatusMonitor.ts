@@ -47,13 +47,13 @@ class StatusMonitor {
 					protocol: 'http',
 					host: 'localhost',
 					path: '/',
-					port: '4040'
+					port: '4000'
 				},
 				{
 					protocol: 'http',
 					host: 'localhost',
 					path: `/${api}`,
-					port: '4040'
+					port: '4000'
 				}
 			]
 		};

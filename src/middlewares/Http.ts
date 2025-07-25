@@ -4,20 +4,21 @@
  * @author Faiz A. Farooqui <faiz@geekyants.com>
  */
 
-import * as cors from 'cors';
 import { Application } from 'express';
-import * as flash from 'express-flash';
-import * as compress from 'compression';
-import * as connect from 'connect-mongo';
 import * as bodyParser from 'body-parser';
+import * as compress from 'compression';
+import * as cors from 'cors';
 import * as session from 'express-session';
 import * as expressValidator from 'express-validator';
+import * as flash from 'express-flash';
+import * as MySQLStore from 'express-mysql-session';
 
-import Log from './Log';
 import Locals from '../providers/Locals';
 import Passport from '../providers/Passport';
+import Database from '../providers/Database';
+import Log from './Log';
 
-const MongoStore = connect(session);
+const MySQLStoreSession = MySQLStore(session);
 
 class Http {
 	public static mount(_express: Application): Application {
@@ -27,7 +28,6 @@ class Http {
 		_express.use(bodyParser.json({
 			limit: Locals.config().maxUploadLimit
 		}));
-
 		_express.use(bodyParser.urlencoded({
 			limit: Locals.config().maxUploadLimit,
 			parameterLimit: Locals.config().maxParameterLimit,
@@ -43,12 +43,19 @@ class Http {
 		// Enables the request flash messages
 		_express.use(flash());
 
-		/**
-		 * Enables the session store
-		 *
-		 * Note: You can also add redis-store
-		 * into the options object.
-		 */
+        // Session store options
+        const sessionStoreOptions = {
+            host: Locals.config().mysqlConfig.host,
+            port: Locals.config().mysqlConfig.port,
+            user: Locals.config().mysqlConfig.user,
+            password: Locals.config().mysqlConfig.password,
+            database: Locals.config().mysqlConfig.database,
+            clearExpired: true,
+            checkExpirationInterval: 900000, // 15 minutes
+        };
+
+        const sessionStore = new MySQLStoreSession(sessionStoreOptions, Database.pool);
+
 		const options = {
 			resave: true,
 			saveUninitialized: true,
@@ -56,10 +63,7 @@ class Http {
 			cookie: {
 				maxAge: 1209600000 // two weeks (in ms)
 			},
-			store: new MongoStore({
-				url: process.env.MONGOOSE_URL,
-				autoReconnect: true
-			})
+			store: sessionStore
 		};
 
 		_express.use(session(options));

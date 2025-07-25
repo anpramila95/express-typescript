@@ -10,38 +10,29 @@ import Log from '../../middlewares/Log';
 
 class Local {
 	public static init (_passport: any): any {
-		_passport.use(new Strategy({ usernameField: 'email' }, (email, password, done) => {
-			Log.info(`Email is ${email}`);
-			Log.info(`Password is ${password}`);
+		_passport.use(new Strategy({ usernameField: 'email' }, async (email, password, done) => {
+			Log.info(`Authenticating user: ${email}`);
 
-			User.findOne({ email: email.toLowerCase() }, (err, user) => {
-				Log.info(`user is ${user.email}`);
-				Log.info(`error is ${err}`);
+			try {
+				const user = await User.findOne({ email: email.toLowerCase() });
 
-				if (err) {
-					return done(err);
-				}
-
-				if (! user) {
+				if (!user) {
 					return done(null, false, { msg: `E-mail ${email} not found.`});
 				}
 
-				if (user && !user.password) {
-					return done(null, false, { msg: `E-mail ${email} was not registered with us using any password. Please use the appropriate providers to Log-In again!`});
+				if (!user.password) {
+					return done(null, false, { msg: `E-mail ${email} was not registered with a password. Please use a social login.`});
 				}
 
-				Log.info('comparing password now!');
+				const isMatch = await user.comparePassword(password);
+				if (isMatch) {
+					return done(null, user);
+				}
 
-				user.comparePassword(password, (_err, _isMatch) => {
-					if (_err) {
-						return done(_err);
-					}
-					if (_isMatch) {
-						return done(null, user);
-					}
-					return done(null, false, { msg: 'Invalid E-mail or password.'});
-				});
-			});
+				return done(null, false, { msg: 'Invalid E-mail or password.'});
+			} catch (err) {
+				return done(err);
+			}
 		}));
 	}
 }

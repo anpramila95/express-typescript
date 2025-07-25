@@ -20,17 +20,17 @@ import RegisterController from '../controllers/Auth/Register';
 const router = Router();
 const cache = Cache.cache;
 
-router.get('/', cache(10), HomeController.index);
+// router.get('/', cache(10), HomeController.index);
 
-router.get('/signup', cache(10), RegisterController.show);
-router.post('/signup', RegisterController.perform);
+// router.get('/signup', cache(10), RegisterController.show);
+// router.post('/signup', RegisterController.perform);
 
-router.get('/login', cache(10), LoginController.show);
-router.post('/login', LoginController.perform);
+// router.get('/login', cache(10), LoginController.show);
+// router.post('/login', LoginController.perform);
 
-router.get('/logout', LogoutController.perform);
+// router.get('/logout', LogoutController.perform);
 
-router.get('/account', Passport.isAuthenticated, AccountController.index);
+// router.get('/account', Passport.isAuthenticated, AccountController.index);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['email', 'profile'], failureRedirect: '/login' }));
 router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), SocialController.googleCallback);

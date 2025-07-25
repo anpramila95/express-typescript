@@ -15,73 +15,60 @@ class Google {
 			clientSecret: process.env.GOOGLE_SECRET,
 			callbackURL: `${Locals.config().url}/auth/google/callback`,
 			passReqToCallback: true
-		}, (req, accessToken, refreshToken, profile, done) => {
-			if (req.user) {
-				User.findOne({ google: profile.id }, (err, existingUser) => {
-					if (err) {
-						return done(err);
-					}
+		}, async (req, accessToken, refreshToken, profile, done) => {
+			try {
+                const email = profile.emails[0].value;
+                const googleId = profile.id;
+
+				if (req.user) { // User is already logged in, link the account
+                    const loggedInUser = req.user as User;
+					const existingUser = await User.findOne({ email: `google:${googleId}` }); // Check if google account is already linked
 
 					if (existingUser) {
-						req.flash('errors', { msg: 'There is already a Google account that belongs to you. Sign in with that account or delete it, then link it with your current account.' });
-						return done(err);
-					} else {
-						User.findById(req.user.id, (err, user) => {
-							if (err) {
-								return done(err);
-							}
-
-							user.google = profile.id;
-							user.tokens.push({ kind: 'google', accessToken });
-							user.fullname = user.fullname || profile.displayName;
-							user.gender = user.gender || profile._json.gender;
-							if (profile.photos) {
-								user.picture = user.picture || profile.photos[0].value;
-							}
-							user.save((err) => {
-								req.flash('info', { msg: 'Google account has been linked.' });
-								return done(err, user);
-							});
-						});
-					}
-				});
-			} else {
-				User.findOne({ google: profile.id }, (err, existingUser) => {
-					if (err) {
-						return done(err);
+						req.flash('errors', { msg: 'There is already a Google account that belongs to you.' });
+						return done(null, false);
 					}
 
-					if (existingUser) {
-						return done(null, existingUser);
+                    const userToUpdate = await User.findById(loggedInUser.id);
+                    if(!userToUpdate) {
+                        return done(null, false, { msg: "User not found."});
+                    }
+
+					userToUpdate.google = googleId;
+					userToUpdate.tokens.push({ kind: 'google', accessToken });
+					userToUpdate.fullname = userToUpdate.fullname || profile.displayName;
+					userToUpdate.picture = userToUpdate.picture || profile._json.picture;
+					await userToUpdate.save();
+
+					req.flash('info', { msg: 'Google account has been linked.' });
+					return done(null, userToUpdate);
+
+				} else { // User is not logged in, login or register
+					let user = await User.findOne({ email: `google:${googleId}` });
+					if (user) {
+						return done(null, user);
 					}
 
-					User.findOne({ email: profile.emails[0].value }, (err, existingEmailUser) => {
-						if (err) {
-							return done(err);
-						}
+                    // Check if email exists
+                    user = await User.findOne({ email: email });
+                    if(user) {
+                        req.flash('errors', { msg: 'An account with this email already exists. Please login to link your Google account.' });
+                        return done(null, false);
+                    }
 
-						if (existingEmailUser) {
-							req.flash('errors', { msg: 'There is already an account using this email address. Sing in to that accoount and link it with Google manually from Account Settings.' });
-							return done(err);
-						} else {
-							const user = new User();
-
-							user.email = profile.emails[0].value;
-							user.google = profile.id;
-							user.tokens.push({ kind: 'google', accessToken });
-							user.fullname = user.fullname || profile.displayName;
-							user.gender = user.gender || profile._json.gender;
-							if (profile.photos) {
-								user.picture = user.picture || profile.photos[0].value;
-							}
-							user.save().then(() => {
-								return done(user);
-							}).catch((error) => {
-								return done(error);
-							});
-						}
+					const newUser = new User({
+                        email: email,
+						google: googleId,
+						tokens: [{ kind: 'google', accessToken }],
+						fullname: profile.displayName,
+						picture: profile._json.picture
 					});
-				});
+
+					await newUser.save();
+					return done(null, newUser);
+				}
+			} catch (err) {
+				return done(err);
 			}
 		}));
 	}
