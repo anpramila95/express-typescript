@@ -43,5 +43,6 @@ export interface IUser {
     // Dành cho việc reset mật khẩu (chỉ dùng khi cần)
     passwordResetToken?: string;
     passwordResetExpires?: Date;
+    
 }
 export default IUser;

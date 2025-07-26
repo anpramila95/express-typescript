@@ -5,6 +5,9 @@ import Subscription from '../../models/Subscription';
 import Log from '../../middlewares/Log';
 //import getToken from '../../services/getTokenService'; // Import service mới
 import { ISite } from '../../models/Site'; // Import interface ISite
+import Notification from '../../models/Notification';
+import { IUser } from '../../interfaces/models/user';
+
 interface AuthenticatedUser {
     id: number;
     email: string;
@@ -71,6 +74,75 @@ class AccountInfoController {
         } catch (error) {
             Log.error(`[AccountInfoController] Lỗi khi lấy thông tin tài khoản cho user ID ${authUser.id}: ${error.stack}`);
             return res.status(500).json({ error: 'Lỗi máy chủ khi lấy thông tin tài khoản.' });
+        }
+    }
+
+    /**
+     * API để lấy danh sách thông báo
+     */
+    public static async list(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const { limit = '10', page = '1', unreadOnly = 'false' } = req.query;
+
+        try {
+            const pageNum = parseInt(page as string, 10);
+            const limitNum = parseInt(limit as string, 10);
+            const offset = (pageNum - 1) * limitNum;
+
+            const result = await Notification.findByUserId(user.id, {
+                limit: limitNum,
+                offset,
+                unreadOnly: unreadOnly === 'true'
+            });
+
+            return res.json({
+                message: 'Lấy danh sách thông báo thành công',
+                data: result.notifications,
+                pagination: {
+                    totalItems: result.total,
+                    currentPage: pageNum,
+                    perPage: limitNum,
+                    totalPages: Math.ceil(result.total / limitNum)
+                }
+            });
+
+        } catch (error) {
+            Log.error(`[NotificationController] ${error}`);
+            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+        }
+    }
+
+    /**
+     * API để đánh dấu một thông báo là đã đọc
+     */
+    public static async markAsRead(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const { notificationId } = req.params;
+
+        try {
+            const success = await Notification.markAsRead(Number(notificationId), user.id);
+            if (!success) {
+                return res.status(404).json({ error: 'Không tìm thấy thông báo hoặc bạn không có quyền.' });
+            }
+            return res.json({ message: 'Đã cập nhật thông báo.' });
+        } catch (error) {
+            Log.error(`[NotificationController] ${error}`);
+            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+        }
+    }
+
+     /**
+     * API để đánh dấu tất cả là đã đọc
+     */
+    public static async markAllAsRead(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        try {
+            const count = await Notification.markAllAsRead(user.id);
+            return res.json({ message: `Đã cập nhật ${count} thông báo.` });
+        } catch (error)
+        {
+            Log.error(`[NotificationController] ${error}`);
+            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
         }
     }
 }

@@ -23,12 +23,23 @@ import ApiKeyController from '../controllers/Api/ApiKeyController'; // <-- Impor
 import SiteAdminController from '../controllers/Api/Admin/SiteAdminController';
 import AffiliateController from '../controllers/Api/AffiliateController'; // <-- Import controller mới
 import AdminMiddleware from '../middlewares/Admin'; // <-- Import middleware mới
+import PasswordController from '../controllers/Api/Auth/PasswordController';
+import ProfileController from '../controllers/Api/ProfileController';
+
+// Import các controller mới
+import PermissionController from '../controllers/Api/Admin/PermissionController';
+import RoleController from '../controllers/Api/Admin/RoleController';
+import UserManagementController from '../controllers/Api/Admin/UserManagementController';
+
+
 
 const router = Router();
 // --- Public Routes ---
 router.post('/auth/login', LoginController.perform);
 router.post('/auth/register', RegisterController.perform);
 router.post('/auth/refresh-token', expressJwt({ secret: Locals.config().appSecret }), RefreshTokenController.perform);
+router.post('/auth/forgot', PasswordController.forgot);
+router.post('/auth/reset/:token', PasswordController.reset);
 
 
 // --- API Key Management Routes ---
@@ -50,8 +61,16 @@ router.post('/media/gen-ai', FlexibleAuthMiddleware.authenticate, MediaControlle
 
 //account ìno
 router.get('/account/info', FlexibleAuthMiddleware.authenticate, AccountInfoController.getInfo); // <-- Route mới
+router.put('/account/info', FlexibleAuthMiddleware.authenticate, ProfileController.update);
 
-// plans 
+// == NOTIFICATION ROUTES ==
+// Phải đăng nhập mới dùng được các API này (nhờ checkAuth)
+router.get('/notifications', FlexibleAuthMiddleware.authenticate, AccountInfoController.list);
+router.post('/notifications/:notificationId/read', FlexibleAuthMiddleware.authenticate, AccountInfoController.markAsRead);
+router.post('/notifications/read-all', FlexibleAuthMiddleware.authenticate, AccountInfoController.markAllAsRead);
+
+
+// plans
 router.get('/plans', FlexibleAuthMiddleware.authenticate, PlanController.listPlans);
 router.get('/credit-packages', FlexibleAuthMiddleware.authenticate, CreditController.listPackages);
 
@@ -89,6 +108,10 @@ adminRouter.get('/users', SiteAdminController.getAllUsers);
 adminRouter.post('/users/unblock', SiteAdminController.unblockUser);
 //changePassword
 adminRouter.post('/users/change-password', SiteAdminController.changePassword);
+// Quản lý User
+adminRouter.post('/users/:userId/assign-role', UserManagementController.assignRole);
+adminRouter.post('/users', UserManagementController.createUser);
+
 
 
 //affiliates
@@ -106,6 +129,15 @@ adminRouter.post('/subscription-plans', SiteAdminController.createSubscriptionPl
 adminRouter.post('/pricing-plans', SiteAdminController.createPricingPlan);
 adminRouter.get('/pricing-plans', SiteAdminController.getAllPricingPlans);
 
+
+// Quản lý Roles
+adminRouter.get('/roles', RoleController.list);
+adminRouter.post('/roles', RoleController.create);
+adminRouter.post('/roles/:roleId/permissions', RoleController.assignPermissions);
+
+
+adminRouter.get('/permissions', PermissionController.list);
+adminRouter.post('/permissions', PermissionController.create);
 
 // Gắn router của admin vào /api/admin
 router.use('/admin', FlexibleAuthMiddleware.authenticate, adminRouter);

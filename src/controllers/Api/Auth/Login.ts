@@ -8,9 +8,11 @@ import * as jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
 
 import User from '../../../models/User';
-import Site, {ISite} from '../../../models/Site';
+import Site, { ISite } from '../../../models/Site';
 import BlockedUser from '../../../models/BlockedUser'; // <-- 1. Import model BlockedUser
 import Log from '../../../middlewares/Log';
+import MailService from '../../../services/MailService';
+
 
 class Login {
     public static async perform(req: Request, res: Response): Promise<any> {
@@ -30,7 +32,7 @@ class Login {
             const email = req.body.email.toLowerCase();
             const password = req.body.password;
 
-            const site = (req as any).site as ISite; 
+            const site = (req as any).site as ISite;
 
             const user = await User.findOne({ email: email, site_id: site.id });
             if (!user) {
@@ -44,7 +46,7 @@ class Login {
             const blockDetails = await BlockedUser.findBlockDetails(user.id);
             if (blockDetails) {
                 Log.warn(`Đăng nhập bị chặn cho user ID: ${user.id} trên site ID: ${site.id}`);
-                
+
                 // Xây dựng thông báo lỗi
                 let errorMessage = 'Tài khoản của bạn đã bị khóa trên trang web này.';
                 if (blockDetails.reason) {
@@ -75,6 +77,17 @@ class Login {
             if (site.user_id === user.id) {
                 isAdmin = true; // Người dùng là chủ sở hữu của site
             }
+
+            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+            // Kiểm tra IP lạ (bạn cần triển khai logic này trong User model)
+            const isNewIP = await user.isNewIP(ip as string);
+            if (isNewIP) {
+                const message = `<p>Your account was just accessed from a new IP address: ${ip}.</p>
+                                 <p>If this was you, you can safely ignore this email.</p>`;
+                await MailService.sendMail(user.email, 'New Login Alert', message);
+            }
+
 
             const token = jwt.sign(
                 { id: user.id, email: user.email, isAdmin: isAdmin, siteId: site.id },

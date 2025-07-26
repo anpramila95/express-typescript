@@ -6,11 +6,14 @@ import Log from '../../../middlewares/Log';
 import SubscriptionPlan from '../../../models/SubscriptionPlan';
 import User from '../../../models/User';
 import AffiliateService from '../../../services/AffiliateService';
-import WithdrawalRequest, {WithdrawalStatus} from '../../../models/WithdrawalRequest';
+import WithdrawalRequest, { WithdrawalStatus } from '../../../models/WithdrawalRequest';
 import Site, { ISite } from "../../../models/Site";
 // --- Thêm các import cần thiết ---
 import Subscription from '../../../models/Subscription';
 import PricingPlan from '../../../models/PricingPlan';
+import NotificationService from '../../../services/NotificationService'; // <-- THÊM DÒNG NÀY
+import AuditLogService from '../../../services/AuditLogService';
+
 
 interface AuthenticatedAdmin {
     id: number;
@@ -82,6 +85,28 @@ class ApprovalController {
             }
 
             await Transaction.updateStatus(transactionId, 'approved', adminNotes || 'Đã duyệt bởi admin');
+            // GỬI THÔNG BÁO QUA NOVU
+
+
+            // GỌI SERVICE ĐỂ TẠO THÔNG BÁO
+            await NotificationService.create(
+                transaction.user_id,
+                'transaction_approved',
+                'Giao dịch của bạn đã được duyệt',
+                `Giao dịch #${transactionId} đã được chấp thuận.`
+            );
+
+            await AuditLogService.log({
+                siteId: site.id, // Lấy site_id từ người thực hiện hành động
+                userId: admin.id,
+                action: 'transaction.approved',
+                details: {
+                    transactionId: transactionId,
+                    notes: adminNotes
+                },
+                ipAddress: req.ip
+            });
+
             return res.json({ message: 'Giao dịch đã được duyệt thành công.' });
         } catch (error) {
             Log.error(`Lỗi khi duyệt giao dịch ID ${transactionId}: ${error.stack}`);
@@ -112,6 +137,14 @@ class ApprovalController {
             return res.status(403).json({ error: "Người dùng không thuộc về site này." });
         }
         await Transaction.updateStatus(transactionId, 'rejected', adminNotes);
+
+        // GỌI SERVICE ĐỂ TẠO THÔNG BÁO
+        await NotificationService.create(
+            transaction.user_id,
+            'transaction_rejected',
+            'Giao dịch của bạn bị từ chối',
+            `Rất tiếc, giao dịch #${transactionId} đã bị từ chối. Lý do: ${adminNotes}`
+        );
         return res.json({ message: 'Giao dịch đã bị từ chối.' });
     }
 

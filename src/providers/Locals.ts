@@ -59,7 +59,23 @@ class Locals {
       tts: process.env.CREDIT_COST_TTS || 1,
       imageToVideo: process.env.CREDIT_COST_IMAGE_TO_VIDEO || 3,
     };
+
+    const awsSesAccessKeyId = process.env.AWS_SES_ACCESS_KEY_ID || '';
+    const awsSesSecretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY || '';
+    const awsSesRegion = process.env.AWS_SES_REGION || 'us-east-1';
+    const mailFrom = process.env.MAIL_FROM || 'noreply@example.com';
+
+    //novuApiKey
+    const novuApiKey = process.env.NOVU_API_KEY || '';
+
+    const sesConfig = {
+      accessKeyId: awsSesAccessKeyId,
+      secretAccessKey: awsSesSecretAccessKey,
+      region: awsSesRegion,
+      from: mailFrom,
+    };
     return {
+      sesConfig,
       appSecret,
       apiPrefix,
       company,
@@ -82,6 +98,7 @@ class Locals {
       queueMonitorHttpPort,
       mysqlConfig,
       creditCosts,
+      novuApiKey
     };
   }
 

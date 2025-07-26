@@ -22,17 +22,18 @@ export class User implements IUser {
     public geolocation: string;
     public website: string;
     public picture: string;
-    public passwordResetToken: string;
-    public passwordResetExpires: Date;
+    public passwordResetToken?: string;
+    public passwordResetExpires?: Date;
     public last_login?: Date;
-    public facebook: string;
-    public twitter: string;
+    public facebook?: string;
+    public twitter?: string;
     public isAdmin: boolean = false; // Default to false, can be set laters
-    public google: string;
-    public github: string;
+    public google?: string;
+    public github?: string;
     public tokens: any[]; // Note: Storing tokens in a TEXT/JSON column is needed
     public affiliate_id: number | null; // Required affiliate ID to match IUser
     public site_id: number; // Required site ID
+    public knownIPs?: string[]; // Optional, can be added later if needed
 
 
     constructor(user: any) {
@@ -56,6 +57,7 @@ export class User implements IUser {
         this.last_login = user.last_login || new Date();
         this.affiliate_id = user.affiliate_id ?? null; // Ensure affiliate_id is always present
         this.site_id = user.site_id;
+        this.knownIPs = user.knownIPs || [];
     }
     public instagram: string;
     public linkedin: string;
@@ -125,10 +127,10 @@ export class User implements IUser {
     /**
      * Finds a user by its email
      */
-    public static async findOne({ email, site_id = null }: { email: string, site_id?: number | null }): Promise<User | null> {
+    public static async findOne({ email, site_id = null, passwordResetToken = null, passwordResetExpires = null }: { email: string, site_id?: number | null, passwordResetToken?: string | null, passwordResetExpires?: Date | string | null }): Promise<User | null> {
         // Bắt đầu với câu lệnh SQL cơ bản
         let sql = 'SELECT * FROM users WHERE email = ?';
-        const params: (string | number)[] = [email];
+        const params: (string | number | Date | null)[] = [email];
 
         // Thêm điều kiện cho site_id một cách linh hoạt
         if (site_id !== null) {
@@ -137,6 +139,13 @@ export class User implements IUser {
         } else {
             sql += ' AND site_id IS NULL';
         }
+
+        // Thêm điều kiện cho passwordResetToken một cách linh hoạt
+        if (passwordResetToken !== null) {
+            sql += ' AND passwordResetToken = ?';
+            params.push(passwordResetToken);
+        }
+
 
         try {
             const [rows] = await Database.pool.query<RowDataPacket[]>(sql, params);
@@ -149,6 +158,55 @@ export class User implements IUser {
             return null;
         }
     }
+
+    //findBy passwordResetToken and passwordResetExpires
+    public static async findByPasswordResetToken(token: string): Promise<User | null> {
+        const sql = 'SELECT * FROM users WHERE passwordResetToken = ? AND passwordResetExpires > NOW()';
+        try {
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [token]);
+            if (rows.length > 0) {
+                return new User(rows[0]);
+            }
+            return null;
+        } catch (error) {
+            Log.error(`Error finding user by password reset token: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Tạo một người dùng mới trong một Site, với mật khẩu đã được băm.
+     * @param userData Dữ liệu người dùng mới
+     * @returns ID của người dùng vừa được tạo
+     */
+    public static async create(userData: Omit<IUser, 'id'>): Promise<{ id: number }> {
+        // Băm mật khẩu trước khi lưu
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+        const sql = `
+            INSERT INTO users (site_id, fullname, email, password)
+            VALUES (?, ?, ?, ?)
+        `;
+
+        try {
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
+                userData.site_id,
+                userData.fullname,
+                userData.email,
+                hashedPassword // <-- Lưu mật khẩu đã băm
+            ]);
+            return { id: result.insertId };
+        } catch (error) {
+            // Xử lý lỗi nếu email đã tồn tại
+            if (error.code === 'ER_DUP_ENTRY') {
+                throw new Error('Địa chỉ email này đã được sử dụng.');
+            }
+            Log.error(`[UserModel] Lỗi khi tạo người dùng: ${error}`);
+            throw error;
+        }
+    }
+
 
     /**
      * Creates a new user
@@ -175,6 +233,7 @@ export class User implements IUser {
                 affiliate_id = VALUES(affiliate_id),
                 site_id = VALUES(site_id)
         `;
+
         const params = [
             this.email, this.password, this.fullname, this.gender, this.geolocation,
             this.website, this.picture, this.google, this.twitter, JSON.stringify(this.tokens),
@@ -196,7 +255,80 @@ export class User implements IUser {
     }
 
 
-    /**ffindOn
+    /**
+     * Cập nhật thông tin người dùng
+     */
+
+    public static async update(data: Partial<IUser>, userId: number): Promise<User> {
+        // Chỉ cập nhật các trường có trong data
+        const fields = [];
+        const values = [];
+
+        if (data.email) {
+            fields.push('email = ?');
+            values.push(data.email);
+        }
+        if (data.fullname) {
+            fields.push('fullname = ?');
+            values.push(data.fullname);
+        }
+        if (data.gender) {
+            fields.push('gender = ?');
+            values.push(data.gender);
+        }
+        if (data.geolocation) {
+            fields.push('geolocation = ?');
+            values.push(data.geolocation);
+        }
+        if (data.website) {
+            fields.push('website = ?');
+            values.push(data.website);
+        }
+        if (data.picture) {
+            fields.push('picture = ?');
+            values.push(data.picture);
+        }
+        if (data.google) {
+            fields.push('google = ?');
+            values.push(data.google);
+        }
+        if (data.twitter) {
+            fields.push('twitter = ?');
+            values.push(data.twitter);
+        }
+        if (data.tokens) {
+            fields.push('tokens = ?');
+            values.push(JSON.stringify(data.tokens));
+        }
+        if (data.affiliate_id) {
+            fields.push('affiliate_id = ?');
+            values.push(data.affiliate_id);
+        }
+        if (data.site_id) {
+            fields.push('site_id = ?');
+            values.push(data.site_id);        
+        }
+        if (data.password) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(data.password, salt);
+            fields.push('password = ?');
+            values.push(hashedPassword);
+        }
+        if (fields.length === 0) {
+            throw new Error('Không có trường nào để cập nhật.');
+        }
+        values.push(userId); // Thêm ID người dùng vào cuối để cập nhật
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        try {
+            await Database.pool.execute(sql, values);
+            return this;
+        } catch (error) {
+            Log.error(`Error updating user: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
      * Compare password
      */
     public async comparePassword(password: string): Promise<boolean> {
@@ -255,6 +387,80 @@ export class User implements IUser {
         } catch (error) {
             Log.error(`Error checking if user ID ${userId} belongs to site ID ${site.id}: ${error.message}`);
             throw error;
+        }
+    }
+
+    // Trong class User
+    public async isNewIP(ip: string): Promise<boolean> {
+        if (!this.knownIPs || !this.knownIPs.includes(ip)) {
+            if (!this.knownIPs) {
+                this.knownIPs = [];
+            }
+            this.knownIPs.push(ip);
+            await this.save();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Lấy tất cả các quyền (permissions) của một người dùng dựa trên các vai trò (roles) được gán.
+     * @param userId ID của người dùng cần kiểm tra.
+     * @returns Một mảng các chuỗi (string) chứa tên của các quyền. Ví dụ: ['users.invite', 'transactions.view']
+     */
+    public static async getPermissions(userId: number): Promise<string[]> {
+        const sql = `
+            SELECT DISTINCT p.name
+            FROM permissions p
+            INNER JOIN role_permissions rp ON p.id = rp.permission_id
+            INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+            WHERE ur.user_id = ?
+        `;
+
+        try {
+            const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [userId]);
+            
+            // rows sẽ là một mảng các object, ví dụ: [{ name: 'users.invite' }, { name: 'transactions.view' }]
+            // Chúng ta cần chuyển nó thành một mảng các chuỗi: ['users.invite', 'transactions.view']
+            const permissions = rows.map(row => row.name);
+            
+            return permissions;
+        } catch (error) {
+            Log.error(`[UserModel] Lỗi khi lấy quyền cho người dùng ${userId}: ${error}`);
+            // Ném lỗi ra ngoài để middleware có thể bắt và xử lý
+            throw new Error('Không thể lấy thông tin quyền của người dùng.');
+        }
+    }
+
+     /**
+     * Gán một vai trò cho một người dùng. 
+     * Xóa các vai trò cũ trước khi gán vai trò mới để đảm bảo mỗi user chỉ có 1 role.
+     */
+    public static async assignRole(userId: number, roleId: number, siteId: number): Promise<boolean> {
+        const connection = await Database.pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Xóa tất cả các vai trò hiện tại của user trong site này
+            const deleteSql = `
+                DELETE ur FROM user_roles ur
+                INNER JOIN roles r ON ur.role_id = r.id
+                WHERE ur.user_id = ? AND r.site_id = ?
+            `;
+            await connection.execute(deleteSql, [userId, siteId]);
+
+            // Gán vai trò mới
+            const insertSql = 'INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)';
+            const [result] = await connection.execute<ResultSetHeader>(insertSql, [userId, roleId]);
+
+            await connection.commit();
+            return result.affectedRows > 0;
+        } catch (error) {
+            await connection.rollback();
+            Log.error(`[UserModel] Lỗi khi gán vai trò cho người dùng: ${error}`);
+            throw error;
+        } finally {
+            connection.release();
         }
     }
 }
