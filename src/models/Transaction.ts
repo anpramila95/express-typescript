@@ -10,6 +10,7 @@ import DiscountCode, {IDiscountCode} from './DiscountCode'; // <-- Import
 export interface ITransaction {
     id: number;
     user_id: number;
+    site_id: number; // Thêm site_id để theo dõi transaction thuộc site nào
     type: 'subscription' | 'credit';
     description: string;
     amount: number;
@@ -87,6 +88,7 @@ class Transaction {
      */
     public static async createSubscriptionRequest(
         userId: number,
+        siteId: number, // Thêm site_id parameter
         pricingPlan: IPricingPlan,
         discountInfo?: { code: IDiscountCode; finalAmount: number }
     ): Promise<{ id: number }> {
@@ -105,13 +107,14 @@ class Transaction {
         };
 
         const sql = `
-            INSERT INTO transactions (user_id, type, description, amount, plan_id, status, meta)
-            VALUES (?, 'subscription', ?, ?, ?, 'pending', ?)
+            INSERT INTO transactions (user_id, site_id, type, description, amount, plan_id, status, meta)
+            VALUES (?, ?, 'subscription', ?, ?, ?, 'pending', ?)
         `;
 
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
                 userId,
+                siteId, // Thêm site_id vào query
                 description,
                 finalAmount, // <-- Lưu giá cuối cùng vào cột amount
                 pricingPlan.plan_id,
@@ -139,6 +142,7 @@ class Transaction {
      */
     public static async createCreditPurchaseRequest(
         userId: number,
+        siteId: number, // Thêm site_id parameter
         creditPackage: ICreditPackage, // Giả sử model của bạn là CreditPackage
         discountInfo?: { code: IDiscountCode; finalAmount: number }
     ): Promise<{ id: number }> {
@@ -158,13 +162,14 @@ class Transaction {
         };
 
         const sql = `
-            INSERT INTO transactions (user_id, type, description, amount, credits_change, status, meta)
-            VALUES (?, 'credit', ?, ?, ?, 'pending', ?)
+            INSERT INTO transactions (user_id, site_id, type, description, amount, credits_change, status, meta)
+            VALUES (?, ?, 'credit', ?, ?, ?, 'pending', ?)
         `;
 
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
                 userId,
+                siteId, // Thêm site_id vào query
                 description,
                 finalAmount,      // Giá cuối cùng
                 creditsAmount,    // Số credit sẽ nhận được
@@ -184,14 +189,14 @@ class Transaction {
     }
 
 
-    public static async createCreditRequest(userId: number, pkg: ICreditPackage): Promise<{ id: number }> {
+    public static async createCreditRequest(userId: number, siteId: number, pkg: ICreditPackage): Promise<{ id: number }> {
         const sql = `
-            INSERT INTO transactions (user_id, type, description, amount, credits_change, package_id, status) 
-            VALUES (?, 'credit', ?, ?, ?, ?, 'pending')
+            INSERT INTO transactions (user_id, site_id, type, description, amount, credits_change, package_id, status) 
+            VALUES (?, ?, 'credit', ?, ?, ?, ?, 'pending')
         `;
         const description = `Yêu cầu mua gói: ${pkg.name}`;
         try {
-            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [userId, description, pkg.price, pkg.credits_amount, pkg.id]);
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [userId, siteId, description, pkg.price, pkg.credits_amount, pkg.id]);
             return { id: result.insertId };
         } catch (error) {
             Log.error(`[TransactionModel] Lỗi khi tạo yêu cầu mua credit: ${error.message}`);
@@ -199,15 +204,33 @@ class Transaction {
         }
     }
 
-    public static async findAllPending(): Promise<ITransaction[]> {
-        const sql = 'SELECT * FROM transactions WHERE status = "pending" ORDER BY created_at ASC';
-        const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql);
+    public static async findAllPending(siteId?: number): Promise<ITransaction[]> {
+        let sql = 'SELECT * FROM transactions WHERE status = "pending"';
+        const params: any[] = [];
+        
+        if (siteId) {
+            sql += ' AND site_id = ?';
+            params.push(siteId);
+        }
+        
+        sql += ' ORDER BY created_at ASC';
+        
+        const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, params);
         return rows as ITransaction[];
     }
 
-    public static async findAll(userId: number): Promise<ITransaction[]> {
-        const sql = 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC';
-        const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [userId]);
+    public static async findAll(userId: number, siteId?: number): Promise<ITransaction[]> {
+        let sql = 'SELECT * FROM transactions WHERE user_id = ?';
+        const params: any[] = [userId];
+        
+        if (siteId) {
+            sql += ' AND site_id = ?';
+            params.push(siteId);
+        }
+        
+        sql += ' ORDER BY created_at DESC';
+        
+        const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, params);
         return rows as ITransaction[];
     }
 
@@ -237,6 +260,7 @@ class Transaction {
      */
     public static async createCompleted(data: {
         user_id: number;
+        site_id: number; // Thêm site_id là required
         type: 'subscription' | 'credit';
         status: 'approved' | 'completed'; // Thường là 'approved'
         description: string;
@@ -248,15 +272,16 @@ class Transaction {
     }): Promise<{ id: number }> {
         const sql = `
             INSERT INTO transactions (
-                user_id, type, status, description, amount, plan_id,
+                user_id, site_id, type, status, description, amount, plan_id,
                 credits_change, meta, notes, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         `;
 
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
                 data.user_id,
+                data.site_id, // Thêm site_id vào query
                 data.type,
                 data.status,
                 data.description,

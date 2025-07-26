@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import AffiliateEarning from '../../models/AffiliateEarning';
 import WithdrawalRequest from '../../models/WithdrawalRequest';
-
+import {ISite} from '../../models/Site';
 import Log from '../../middlewares/Log';
 
 interface AuthenticatedUser {
@@ -95,15 +95,17 @@ class AffiliateController {
      * Lấy lịch sử yêu cầu rút tiền của người dùng đã đăng nhập.
      */
     public static async getWithdrawalHistory(req: Request, res: Response): Promise<Response> {
+        const site = req.site as ISite;
         const user = req.user as unknown as AuthenticatedUser;
         const { page = 1, limit = 15 } = req.query;
         const offset = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
 
         try {
-            const { items, total } = await WithdrawalRequest.findAll({
+            const { items, total } = await WithdrawalRequest.findAndCountAll({
                 userId: user.id,
                 limit: parseInt(limit as string, 10),
-                offset
+                offset,
+                site_id: site.id
             });
 
             return res.json({
@@ -121,6 +123,40 @@ class AffiliateController {
         }
     }
     
+
+    /**
+     * Lấy danh sách người dùng F1 (cấp 1) và chi tiết hoa hồng từ mỗi người (có phân trang).
+     */
+    public static async getDirectDownlineDetails(req: Request, res: Response): Promise<Response> {
+        const user = req.user as unknown as AuthenticatedUser;
+
+        // Lấy các tham số phân trang từ query string
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10; // Mặc định 10 mục/trang
+        const offset = (page - 1) * limit;
+
+        try {
+            // Gọi phương thức model với các tùy chọn phân trang
+            const { items, total } = await AffiliateEarning.getDirectDownlineDetails(user.id, { limit, offset });
+
+            const totalPages = Math.ceil(total / limit);
+
+            // Trả về dữ liệu kèm thông tin phân trang (pager)
+            return res.json({
+                items,
+                pager: {
+                    currentPage: page,
+                    perPage: limit,
+                    totalItems: total,
+                    totalPages: totalPages
+                }
+            });
+
+        } catch (error) {
+            Log.error(`Lỗi khi lấy chi tiết downline F1: ${error.stack}`);
+            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+        }
+    }
 }
 
 export default AffiliateController;

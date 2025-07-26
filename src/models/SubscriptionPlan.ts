@@ -4,13 +4,14 @@ import type * as mysql from 'mysql2';
 
 export interface ISubscriptionPlan {
     id: number;
-    user_id?: number;
+    site_id: number; // Thay đổi từ user_id thành site_id để rõ ràng hơn
     name: string;
     description?: string;
     // Xóa price và currency
     max_concurrent_jobs: number;
     options?: any;
     pricings?: any[]; // Thêm để chứa các gói giá
+    pricing_name?: string; // <-- ADD THIS LINE
     expires_at?: Date | null; // Thêm để chứa ngày hết hạn nếu có
 }
 
@@ -40,6 +41,7 @@ class SubscriptionPlan {
 
         return {
             id: row.id,
+            site_id: row.site_id, // Thêm site_id từ database
             name: row.name,
             description: row.description,
             max_concurrent_jobs: row.max_concurrent_jobs,
@@ -103,6 +105,7 @@ class SubscriptionPlan {
                 const row = rows[0];
                 return {
                     id: row.id,
+                    site_id: row.site_id, // Thêm site_id từ database
                     name: row.name,
                     description: row.description,
                     max_concurrent_jobs: row.max_concurrent_jobs,
@@ -116,15 +119,68 @@ class SubscriptionPlan {
         }
     }
     /**
-     * Lấy tất cả các gói dịch vụ.
+     * Lấy tất cả các gói dịch vụ theo site_id.
      */
-    public static async findAll({ limit, offset, userId }: { limit?: number; offset?: number, userId?: number }): Promise<ISubscriptionPlan[]> {
-        const sql = 'SELECT * FROM subscription_plans WHERE user_id = ? ORDER BY price ASC';
+    public static async findAll({ limit, offset, siteId }: { limit?: number; offset?: number, siteId?: number }): Promise<ISubscriptionPlan[]> {
+        let sql = 'SELECT * FROM subscription_plans';
+        const params: any[] = [];
+        
+        if (siteId) {
+            sql += ' WHERE site_id = ?';
+            params.push(siteId);
+        }
+        
+        sql += ' ORDER BY id ASC';
+        
         try {
-            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [userId]);
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, params);
             return rows.map(this.parsePlan);
         } catch (error) {
             Log.error(`[SubscriptionPlanModel] Lỗi khi lấy tất cả gói: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Lấy tất cả các gói subscription cùng với các gói giá theo site_id.
+     */
+    public static async findAllWithPricingBySite(siteId: number): Promise<ISubscriptionPlan[]> {
+        const sql = `
+            SELECT
+                sp.id,
+                sp.site_id,
+                sp.name,
+                sp.description,
+                sp.max_concurrent_jobs,
+                sp.options,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', pp.id,
+                        'name', pp.name,
+                        'price', pp.price,
+                        'currency', pp.currency,
+                        'duration_days', pp.duration_days
+                    )
+                ) as pricings
+            FROM
+                subscription_plans sp
+            LEFT JOIN
+                pricing_plans pp ON sp.id = pp.plan_id
+            WHERE
+                sp.site_id = ?
+                AND pp.status = 'active'
+                AND (pp.start_date IS NULL OR pp.start_date <= NOW())
+                AND (pp.end_date IS NULL OR pp.end_date >= NOW())
+            GROUP BY
+                sp.id
+            ORDER BY
+                sp.id ASC
+        `;
+        try {
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [siteId]);
+            return rows.map(this.parsePlan);
+        } catch (error) {
+            Log.error(`[SubscriptionPlanModel] Lỗi khi lấy tất cả gói kèm giá theo site: ${error.message}`);
             throw error;
         }
     }
@@ -138,7 +194,7 @@ class SubscriptionPlan {
     public static async create(data: PlanData): Promise<{ id: number }> {
         const sql = `
             INSERT INTO subscription_plans 
-            (name, description, max_concurrent_jobs, options, user_id) 
+            (name, description, max_concurrent_jobs, options, site_id) 
             VALUES (?, ?, ?, ?, ?)
         `;
         // Chuyển 'options' thành chuỗi JSON trước khi lưu
@@ -150,7 +206,7 @@ class SubscriptionPlan {
                 data.description,
                 data.max_concurrent_jobs,
                 optionsString,
-                data.user_id || null // Nếu không có user_id, để là null
+                data.site_id // Thay đổi từ user_id thành site_id
             ]);
             return { id: result.insertId };
         } catch (error) {
@@ -160,12 +216,13 @@ class SubscriptionPlan {
     }
 
     /**
-     * Cập nhật một gói dịch vụ đã có.
+     * Cập nhật một gói dịch vụ đã có (với site_id check).
      * @param id - ID của gói cần cập nhật.
+     * @param siteId - Site ID để đảm bảo quyền sở hữu.
      * @param data - Dữ liệu cần cập nhật.
      * @returns `true` nếu cập nhật thành công, `false` nếu không.
      */
-    public static async update(id: number, data: Partial<PlanData>): Promise<boolean> {
+    public static async update(id: number, siteId: number, data: Partial<PlanData>): Promise<boolean> {
         // Xử lý 'options' nếu nó được cung cấp trong dữ liệu cập nhật
         if (data.options) {
             data.options = JSON.stringify(data.options);
@@ -174,10 +231,10 @@ class SubscriptionPlan {
         const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
         const values = Object.values(data);
 
-        const sql = `UPDATE subscription_plans SET ${fields} WHERE id = ?`;
+        const sql = `UPDATE subscription_plans SET ${fields} WHERE id = ? AND site_id = ?`;
 
         try {
-            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [...values, id]);
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [...values, id, siteId]);
             return result.affectedRows > 0;
         } catch (error) {
             Log.error(`[SubscriptionPlanModel] Lỗi khi cập nhật gói ID ${id}: ${error.message}`);
@@ -186,17 +243,43 @@ class SubscriptionPlan {
     }
 
     /**
-     * Xóa một gói dịch vụ.
+     * Xóa một gói dịch vụ (với site_id check).
      * @param id - ID của gói cần xóa.
+     * @param siteId - Site ID để đảm bảo quyền sở hữu.
      * @returns `true` nếu xóa thành công, `false` nếu không.
      */
-    public static async delete(id: number): Promise<boolean> {
-        const sql = 'DELETE FROM subscription_plans WHERE id = ?';
+    public static async delete(id: number, siteId: number): Promise<boolean> {
+        const sql = 'DELETE FROM subscription_plans WHERE id = ? AND site_id = ?';
         try {
-            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [id]);
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [id, siteId]);
             return result.affectedRows > 0;
         } catch (error) {
             Log.error(`[SubscriptionPlanModel] Lỗi khi xóa gói ID ${id}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Tìm gói dịch vụ theo ID và site_id để đảm bảo quyền sở hữu.
+     */
+    public static async findByIdAndSite(id: number, siteId: number): Promise<ISubscriptionPlan | null> {
+        const sql = 'SELECT * FROM subscription_plans WHERE id = ? AND site_id = ?';
+        try {
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [id, siteId]);
+            if (rows.length > 0) {
+                const row = rows[0];
+                return {
+                    id: row.id,
+                    site_id: row.site_id,
+                    name: row.name,
+                    description: row.description,
+                    max_concurrent_jobs: row.max_concurrent_jobs,
+                    options: row.options ? JSON.parse(row.options) : undefined,
+                };
+            }
+            return null;
+        } catch (error) {
+            Log.error(`[SubscriptionPlanModel] Lỗi khi tìm gói bằng ID ${id} và site ${siteId}: ${error.message}`);
             throw error;
         }
     }

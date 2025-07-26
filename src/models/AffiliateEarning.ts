@@ -10,7 +10,121 @@ interface EarningData {
     commissionRate: number;
 }
 
+
+// Interface cho một bản ghi hoa hồng chi tiết
+export interface IEarningDetail {
+    amount: number;
+    description: string;
+    created_at: Date;
+}
+
+// Interface cho một người dùng F1, bao gồm lịch sử hoa hồng
+export interface IDirectDownlineUserDetail {
+    id: number;
+    name: string;
+    email: string;
+    join_date: Date;
+    total_earnings_from_user: number;
+    earnings_history: IEarningDetail[];
+}
+// Interface cho kết quả trả về của hàm, bao gồm cả tổng số
+export interface IDownlinePagedResult {
+    items: IDirectDownlineUserDetail[];
+    total: number;
+}
+
+
+
 class AffiliateEarning {
+
+    /**
+     * Lấy danh sách người dùng F1 (cấp 1) và chi tiết hoa hồng từ mỗi người (có phân trang).
+     * @param userId ID của người giới thiệu
+     * @param options Tùy chọn phân trang { limit, offset }
+     * @returns Danh sách người dùng F1 trong trang và tổng số người dùng F1.
+     */
+    public static async getDirectDownlineDetails(
+        userId: number,
+        options: { limit: number; offset: number }
+    ): Promise<IDownlinePagedResult> {
+        const connection = await Database.pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // 1. Đếm tổng số người dùng F1 để phân trang
+            const countSql = `SELECT COUNT(id) as total FROM users WHERE affiliate_id = ?`;
+            const [countRows] = await connection.query<mysql.RowDataPacket[]>(countSql, [userId]);
+            const total = countRows[0].total;
+
+            if (total === 0) {
+                return { items: [], total: 0 };
+            }
+
+            // 2. Lấy ID của những người dùng F1 trên trang hiện tại
+            const usersSql = `
+                SELECT id FROM users WHERE affiliate_id = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?;
+            `;
+            const [userRows] = await connection.query<mysql.RowDataPacket[]>(usersSql, [
+                userId,
+                options.limit,
+                options.offset
+            ]);
+
+            if (userRows.length === 0) {
+                return { items: [], total };
+            }
+            const userIdsOnPage = userRows.map(row => row.id);
+
+            // 3. Lấy chi tiết user và toàn bộ hoa hồng của những user trên trang này
+            const detailsSql = `
+                SELECT
+                    u.id, u.name, u.email, u.created_at AS join_date,
+                    ae.amount, ae.description, ae.created_at AS earning_date
+                FROM users u
+                LEFT JOIN affiliate_earnings ae ON u.id = ae.source_user_id AND ae.user_id = ?
+                WHERE u.id IN (?)
+                ORDER BY u.created_at DESC, ae.created_at DESC;
+            `;
+            const [detailRows] = await connection.query<mysql.RowDataPacket[]>(detailsSql, [userId, userIdsOnPage]);
+
+            await connection.commit();
+
+            // 4. Xử lý dữ liệu thô thành cấu trúc lồng nhau (giống như trước)
+            const userMap = new Map<number, IDirectDownlineUserDetail>();
+            for (const row of detailRows) {
+                if (!userMap.has(row.id)) {
+                    userMap.set(row.id, {
+                        id: row.id,
+                        name: row.name,
+                        email: row.email,
+                        join_date: row.join_date,
+                        total_earnings_from_user: 0,
+                        earnings_history: []
+                    });
+                }
+                const userDetail = userMap.get(row.id)!;
+                if (row.amount !== null) {
+                    userDetail.earnings_history.push({
+                        amount: row.amount,
+                        description: row.description,
+                        created_at: row.earning_date
+                    });
+                    userDetail.total_earnings_from_user += parseFloat(row.amount);
+                }
+            }
+
+            return { items: Array.from(userMap.values()), total };
+
+        } catch (error) {
+            await connection.rollback();
+            Log.error(`[AffiliateEarningModel] Lỗi khi lấy chi tiết F1 downline cho user ${userId}: ${error.message}`);
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
     /**
      * Ghi lại một khoản hoa hồng mới vào database.
      */
@@ -46,10 +160,10 @@ class AffiliateEarning {
         userId: number,
         options: { limit: number; offset: number }
     ): Promise<{ items: any[]; total: number }> {
-        
+
         // --- Truy vấn để lấy tổng số bản ghi ---
         const countSql = 'SELECT COUNT(*) as total FROM affiliate_earnings WHERE user_id = ?';
-        
+
         // --- Truy vấn để lấy dữ liệu đã phân trang ---
         const dataSql = `
             SELECT 
@@ -75,7 +189,7 @@ class AffiliateEarning {
             ]);
 
             const total = countRows[0].total || 0;
-            
+
             return { items, total };
 
         } catch (error) {
@@ -101,7 +215,7 @@ class AffiliateEarning {
         const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [userId]);
         return rows.length > 0 ? (rows[0].total || 0) : 0;
     }
-    
+
 }
 
 export default AffiliateEarning;

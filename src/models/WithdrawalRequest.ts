@@ -11,14 +11,106 @@ interface RequestData {
 
 
 // Tùy chọn để lọc và phân trang
-interface FindAllOptions {
-    status?: 'pending' | 'approved' | 'rejected';
-    userId?: number;
-    limit?: number;
-    offset?: number;
+
+// Định nghĩa các interface cần thiết
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface IWithdrawalRequest {
+    id: number;
+    userId: number;
+    amount: number;
+    status: WithdrawalStatus;
+    paymentDetails: string;
+    created_at: Date;
+    updated_at: Date;
+    // Thêm các trường khác nếu có, ví dụ: user's name
+    user_name?: string;
+    user_email?: string;
+}
+
+export interface IWithdrawalPagedResult {
+    items: IWithdrawalRequest[];
+    total: number;
+}
+
+// Tùy chọn để lọc và phân trang
+export interface IFindAllOptions {
+    userId?: number; // ID của người dùng để lọc
+    status?: WithdrawalStatus;
+    limit: number;
+    offset: number;
+    site_id: number; // Thêm site_id để kiểm soát quyền truy cập
 }
 
 class WithdrawalRequest {
+    /**
+     * Tìm tất cả các yêu cầu rút tiền với tùy chọn lọc theo status và phân trang.
+     * @param options Tùy chọn bao gồm status, limit, offset
+     * @returns Danh sách các yêu cầu và tổng số lượng.
+     */
+    public static async findAndCountAll(options: IFindAllOptions): Promise<IWithdrawalPagedResult> {
+        // Xây dựng câu lệnh WHERE một cách linh hoạt
+        let whereClause = '';
+        const params: (string | number)[] = [];
+
+        if (options.status) {
+            whereClause = 'WHERE wr.status = ?';
+            params.push(options.status);
+        }
+
+        if (options.site_id) {
+            if (whereClause) {
+                whereClause += ' AND wr.site_id = ?';
+            } else {
+                whereClause = 'WHERE wr.site_id = ?';
+            }
+            params.push(options.site_id);
+        }
+
+
+        if( options.userId) {
+            if (whereClause) {
+                whereClause += ' AND wr.user_id = ?';
+            } else {
+                whereClause = 'WHERE wr.user_id = ?';
+            }
+            params.push(options.userId);
+        }
+
+        // Câu lệnh đếm tổng số bản ghi khớp với điều kiện
+        const countSql = `SELECT COUNT(wr.id) as total FROM withdrawal_requests wr ${whereClause}`;
+
+        // Câu lệnh lấy dữ liệu chi tiết, join với bảng users để có thêm thông tin
+        const dataSql = `
+            SELECT wr.*, u.name as user_name, u.email as user_email
+            FROM withdrawal_requests wr
+            JOIN users u ON wr.userId = u.id
+            ${whereClause}
+            ORDER BY wr.created_at DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        try {
+            // Đếm tổng số
+            const [countRows] = await Database.pool.query<mysql.RowDataPacket[]>(countSql, params);
+            const total = countRows[0].total;
+
+            if (total === 0) {
+                return { items: [], total: 0 };
+            }
+
+            // Lấy dữ liệu của trang hiện tại
+            const dataParams = [...params, options.limit, options.offset];
+            const [dataRows] = await Database.pool.query<mysql.RowDataPacket[]>(dataSql, dataParams);
+
+            return { items: dataRows as IWithdrawalRequest[], total };
+
+        } catch (error) {
+            Log.error(`[WithdrawalRequestModel] Lỗi khi tìm yêu cầu rút tiền: ${error.message}`);
+            throw error;
+        }
+    }
+
     /**
      * Tạo một yêu cầu rút tiền mới.
      */
@@ -75,69 +167,6 @@ class WithdrawalRequest {
             return null;
         } catch (error) {
             Log.error(`[WithdrawalRequestModel] Lỗi khi tìm chi tiết yêu cầu ID ${id}: ${error.message}`);
-            throw error;
-        }
-    }
-
-    /**
-     * Lấy danh sách yêu cầu rút tiền với các bộ lọc và phân trang.
-     * Tự động đính kèm thông tin người dùng.
-     */
-    public static async findAll(options: FindAllOptions): Promise<{ items: any[]; total: number }> {
-        const { status, userId, limit = 15, offset = 0 } = options;
-
-        let whereClauses: string[] = [];
-        let params: (string | number)[] = [];
-
-        // Thêm các điều kiện lọc vào truy vấn
-        if (status) {
-            whereClauses.push('wr.status = ?');
-            params.push(status);
-        }
-        if (userId) {
-            whereClauses.push('wr.user_id = ?');
-            params.push(userId);
-        }
-
-        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-        // --- Truy vấn để đếm tổng số bản ghi ---
-        const countSql = `SELECT COUNT(*) as total FROM withdrawal_requests as wr ${whereSql}`;
-
-        // --- Truy vấn để lấy dữ liệu chi tiết ---
-        const dataSql = `
-            SELECT 
-                wr.*,
-                u.fullname,
-                u.email
-            FROM withdrawal_requests AS wr
-            JOIN users AS u ON wr.user_id = u.id
-            ${whereSql}
-            ORDER BY wr.created_at DESC
-            LIMIT ? OFFSET ?
-        `;
-
-        try {
-            // Thực hiện cả hai truy vấn song song
-            const [[countRows], [items]] = await Promise.all([
-                Database.pool.query<mysql.RowDataPacket[]>(countSql, params),
-                Database.pool.query<mysql.RowDataPacket[]>(dataSql, [...params, limit, offset])
-            ]);
-
-            const total = countRows[0].total || 0;
-            
-            // Phân giải chuỗi JSON cho mỗi item
-            const processedItems = items.map(item => {
-                if (item.payment_details && typeof item.payment_details === 'string') {
-                    item.payment_details = JSON.parse(item.payment_details);
-                }
-                return item;
-            });
-
-            return { items: processedItems, total };
-
-        } catch (error) {
-            Log.error(`[WithdrawalRequestModel] Lỗi khi lấy danh sách yêu cầu: ${error.message}`);
             throw error;
         }
     }

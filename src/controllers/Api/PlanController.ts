@@ -4,6 +4,7 @@ import Transaction from '../../models/Transaction';
 import PricingPlan from '../../models/PricingPlan';
 import DiscountCode, { IDiscountCode } from '../../models/DiscountCode'; // <-- Import
 import Log from '../../middlewares/Log';
+import Site, { ISite } from "../../models/Site"; // Dùng để lấy siteId từ hostname
 
 interface AuthenticatedUser {
     id: number;
@@ -27,13 +28,19 @@ class PlanController {
         const user = req.user as AuthenticatedUser;
         // Lấy thêm redeemCode từ body
         const { pricingId, redeemCode } = req.body;
-
+        
         if (!pricingId) {
             return res.status(400).json({ error: 'Vui lòng chọn một gói giá.' });
         }
 
+        const site = req.site as ISite;
+        if (!site) {
+            return res.status(400).json({ error: 'Không tìm thấy thông tin site.' });
+        }
+
         try {
-            const pricingPlan = await PricingPlan.findById(Number(pricingId));
+            const pricingPlan = await PricingPlan.findByIdSiteId(Number(pricingId), site.id);
+
             if (!pricingPlan) {
                 return res.status(404).json({ error: 'Gói giá không hợp lệ.' });
             }
@@ -42,7 +49,7 @@ class PlanController {
 
             // Nếu người dùng nhập mã giảm giá
             if (redeemCode) {
-                const discountCode = await DiscountCode.findValidCode(redeemCode);
+                const discountCode = await DiscountCode.findValidCode(redeemCode, site.id);
                 if (!discountCode) {
                     return res.status(400).json({ error: 'Mã giảm giá không hợp lệ hoặc đã hết hạn.' });
                 }
@@ -52,7 +59,7 @@ class PlanController {
             }
 
             // Tạo yêu cầu giao dịch, truyền thông tin giảm giá vào (nếu có)
-            await Transaction.createSubscriptionRequest(user.id, pricingPlan, discountInfo);
+            await Transaction.createSubscriptionRequest(user.id, site.id,  pricingPlan, discountInfo);
 
             return res.status(201).json({ message: 'Yêu cầu nâng cấp của bạn đã được gửi thành công.' });
         } catch (error) {

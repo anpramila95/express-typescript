@@ -46,6 +46,7 @@ class AccountInfoController {
             userDetails.twitter = undefined;
             userDetails.google = undefined;
             userDetails.github = undefined;
+            userDetails.site_id = undefined;
 
 
             // Xây dựng đối tượng phản hồi

@@ -67,7 +67,8 @@ router.get('/affiliate/history', FlexibleAuthMiddleware.authenticate, AffiliateC
 router.get('/affiliate/summary', FlexibleAuthMiddleware.authenticate, AffiliateController.getSummary);
 router.post('/affiliate/request-withdrawal', FlexibleAuthMiddleware.authenticate, AffiliateController.requestWithdrawal);
 router.get('/affiliate/withdrawals', FlexibleAuthMiddleware.authenticate, AffiliateController.getWithdrawalHistory); // <-- Route mới cho người dùng
-
+//getDirectDownlineDetails
+router.get('/affiliate/direct-downline', FlexibleAuthMiddleware.authenticate, AffiliateController.getDirectDownlineDetails); // <-- Route mới cho người dùng
 
 // == ADMIN-ONLY ROUTES ==
 const adminRouter = Router();

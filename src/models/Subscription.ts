@@ -19,22 +19,36 @@ class Subscription {
      * (Hàm này giữ nguyên, không thay đổi)
      */
     public static async findActivePlanByUserId(userId: number): Promise<ISubscriptionPlan | null> {
-        // ... code gốc của hàm này ...
+        // The SQL query now joins pricing_plans and selects its name
         const sql = `
-            SELECT sp.*, s.expires_at
-            FROM subscriptions s
-            JOIN subscription_plans sp ON s.plan_id = sp.id
-            WHERE s.user_id = ? AND s.status = 'active'
+        SELECT
+            sp.*,
+            s.expires_at,
+            pp.name AS pricing_name
+        FROM
+            subscriptions s
+        JOIN
+            subscription_plans sp ON s.plan_id = sp.id
+        LEFT JOIN
+            pricing_plans pp ON s.pricing_id = pp.id
+        WHERE
+            s.user_id = ? AND s.status = 'active'
             AND (s.expires_at IS NULL OR s.expires_at > NOW())
-            ORDER BY s.expires_at DESC
-            LIMIT 1
-        `;
+        ORDER BY
+            s.created_at DESC
+        LIMIT 1;
+    `;
+
         try {
             const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [userId]);
+
             if (rows.length === 0) {
                 return null;
             }
+
             const plan = rows[0];
+
+            // Safely parse JSON options
             if (plan.options && typeof plan.options === 'string') {
                 try {
                     plan.options = JSON.parse(plan.options);
@@ -43,13 +57,13 @@ class Subscription {
                     plan.options = null;
                 }
             }
+
             return plan as ISubscriptionPlan;
         } catch (error) {
             Log.error(`[SubscriptionModel] Error finding active plan for user ${userId}: ${error.message}`);
             throw error;
         }
     }
-
     /**
      * Deactivates all currently active subscriptions for a user.
      * (Hàm này giữ nguyên, không thay đổi)
@@ -77,16 +91,19 @@ class Subscription {
         }
 
         const sql = `
-            INSERT INTO subscriptions (user_id, plan_id, status, active_user_id, expires_at)
-            VALUES (?, ?, 'active', ?, NOW() + INTERVAL ? DAY)
+            INSERT INTO subscriptions (user_id, plan_id, pricing_id, status, active_user_id, expires_at, site_id)
+            VALUES (?, ?, ?, 'active', ?, NOW() + INTERVAL ? DAY, ?)
         `;
-        
+
+
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
                 data.userId,
                 pricingPlan.plan_id,
+                pricingPlan.id,
                 data.userId,
-                pricingPlan.duration_days
+                pricingPlan.duration_days,
+                pricingPlan.site_id
             ]);
             return { id: result.insertId };
         } catch (error) {

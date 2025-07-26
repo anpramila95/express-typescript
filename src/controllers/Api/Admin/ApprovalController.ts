@@ -6,7 +6,7 @@ import Log from '../../../middlewares/Log';
 import SubscriptionPlan from '../../../models/SubscriptionPlan';
 import User from '../../../models/User';
 import AffiliateService from '../../../services/AffiliateService';
-import WithdrawalRequest from '../../../models/WithdrawalRequest';
+import WithdrawalRequest, {WithdrawalStatus} from '../../../models/WithdrawalRequest';
 import Site, { ISite } from "../../../models/Site";
 // --- Thêm các import cần thiết ---
 import Subscription from '../../../models/Subscription';
@@ -51,7 +51,7 @@ class ApprovalController {
 
         const userIdBelongsToSite = await User.userIdBelongsToSite(transaction.user_id, site);
 
-        if(!userIdBelongsToSite) {
+        if (!userIdBelongsToSite) {
             return res.status(403).json({ error: "Người dùng không thuộc về site này." });
         }
 
@@ -104,11 +104,11 @@ class ApprovalController {
         if (!transaction || transaction.status !== 'pending') {
             return res.status(404).json({ error: 'Giao dịch không hợp lệ hoặc đã được xử lý.' });
         }
-        if(transaction.user_id == admin.id) {
+        if (transaction.user_id == admin.id) {
             return res.status(403).json({ error: "Bạn không thể tự xử lý giao dịch cho chính mình." });
         }
         const userIdBelongsToSite = await User.userIdBelongsToSite(transaction.user_id, site);
-        if(!userIdBelongsToSite) {
+        if (!userIdBelongsToSite) {
             return res.status(403).json({ error: "Người dùng không thuộc về site này." });
         }
         await Transaction.updateStatus(transactionId, 'rejected', adminNotes);
@@ -128,42 +128,48 @@ class ApprovalController {
         if (!userId || !pricingPlanId) {
             return res.status(400).json({ error: 'Cần cung cấp userId và pricingPlanId.' });
         }
-        if(userId == admin.id) {
+        if (userId == admin.id) {
             return res.status(403).json({ error: "Bạn không thể tự gán gói cho chính mình." });
         }
 
         try {
             const user = await User.findById(userId);
             if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
-            if(user.site_id !== site.id && user.id !== site.user_id) {
+            if (user.site_id !== site.id && user.id !== site.user_id) {
                 return res.status(403).json({ error: "Người dùng không thuộc về site này." });
             }
 
             // --- Kiểm tra pricing plan có tồn tại không ---
-            const pricingPlan = await PricingPlan.findById(pricingPlanId);
+            const pricingPlan = await PricingPlan.findByIdSiteId(pricingPlanId, site.id);
             if (!pricingPlan) return res.status(404).json({ error: 'Không tìm thấy gói giá (pricing plan).' });
 
-            // 1. Hủy gói cũ của người dùng
-            await Subscription.deactivateAllForUser(userId);
             // 2. Tạo gói mới
-            const newSubscription = await Subscription.create({ userId, pricingPlanId });
+            const newSubscription = await SubscriptionService.changeUserPlan(userId, pricingPlanId);
 
             // 3. Tạo một bản ghi giao dịch đã được duyệt để lưu lại lịch sử
             const plan = await SubscriptionPlan.findById(pricingPlan.plan_id); // Lấy plan gốc để ghi log
+            if (!plan) {
+                return res.status(404).json({ error: 'Không tìm thấy gói dịch vụ tương ứng.' });
+            }
+
+            if (plan.site_id != site.id) {
+                return res.status(403).json({ error: "Gói dịch vụ không thuộc về site này." });
+            }
+            // Tạo bản ghi giao dịch đã duyệt
             const description = `Admin gán trực tiếp gói: ${plan.name} - ${pricingPlan.name}`;
-            const meta = { pricing_id: pricingPlan.id, subscription_id: newSubscription.id };
+            const meta = { pricing_id: pricingPlan.id, subscription_id: newSubscription };
 
-            // await Transaction.createCompleted({
-            //     user_id: userId,
-            //     type: 'subscription',
-            //     status: 'approved',
-            //     description: description,
-            //     amount: pricingPlan.price, // Ghi lại giá tại thời điểm gán
-            //     plan_id: pricingPlan.plan_id,
-            //     meta: JSON.stringify(meta),
-            //     notes: adminNotes
-            // });
-
+            await Transaction.createCompleted({
+                user_id: userId,
+                type: 'subscription',
+                status: 'approved',
+                description: description,
+                amount: pricingPlan.price, // Ghi lại giá tại thời điểm gán
+                plan_id: pricingPlan.plan_id,
+                meta: JSON.stringify(meta),
+                notes: adminNotes,
+                site_id: site.id
+            });
             return res.json({ message: `Đã gán thành công gói "${pricingPlan.name}" cho người dùng.` });
         } catch (error) {
             Log.error(`Lỗi khi admin gán gói: ${error.stack}`);
@@ -184,12 +190,12 @@ class ApprovalController {
         if (!userId || !amount) {
             return res.status(400).json({ error: 'Cần cung cấp userId và amount.' });
         }
-        if(userId == admin.id) {
+        if (userId == admin.id) {
             return res.status(403).json({ error: "Bạn không thể tự cộng credit cho chính mình." });
         }
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
-        if(user.site_id !== site.id && user.id !== site.user_id) {
+        if (user.site_id !== site.id && user.id !== site.user_id) {
             return res.status(403).json({ error: "Người dùng không thuộc về site này." });
         }
         try {
@@ -201,6 +207,32 @@ class ApprovalController {
         }
     }
 
+    //giveCreditsPackage
+    // chưa chạy
+    public static async giveCreditsPackage(req: Request, res: Response): Promise<Response> {
+        const admin = req.user as unknown as AuthenticatedAdmin;
+        const site = req.site as ISite;
+        const { userId, packageId, adminNotes } = req.body;
+        if (!userId || !packageId) {
+            return res.status(400).json({ error: 'Cần cung cấp userId và packageId.' });
+        }
+        if (userId == admin.id) {
+            return res.status(403).json({ error: "Bạn không thể tự cộng credit cho chính mình." });
+        }
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+        if (user.site_id !== site.id && user.id !== site.user_id) {
+            return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+        }
+        try {
+            await UserCredit.addPackage(userId, packageId, adminNotes);
+            return res.json({ message: `Đã cộng thành công gói ${packageId} cho người dùng.` });
+        } catch (error) {
+            Log.error(`Lỗi khi admin cộng gói cho người dùng: ${error.stack}`);
+            return res.status(500).json({ error: 'Đã xảy ra lỗi hệ thống.' });
+        }
+    }
+
     // Các hàm xử lý rút tiền (listPendingWithdrawals, listWithdrawals, v.v.) không thay đổi
     // ...
     // ... (Giữ nguyên các hàm còn lại)
@@ -208,8 +240,39 @@ class ApprovalController {
      * Lấy danh sách các yêu cầu rút tiền đang chờ duyệt.
      */
     public static async listPendingWithdrawals(req: Request, res: Response): Promise<Response> {
-        const requests = await WithdrawalRequest.findAllPending();
-        return res.json(requests);
+        // Lấy các tham số từ query string
+        const site = req.site as ISite;
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 15;
+        const status = 'pending';
+        const offset = (page - 1) * limit;
+
+        try {
+            // Gọi hàm model với các tùy chọn đã lấy được
+            const { items, total } = await WithdrawalRequest.findAndCountAll({
+                status,
+                limit,
+                offset,
+                site_id: site.id
+            });
+
+            const totalPages = Math.ceil(total / limit);
+
+            // Trả về kết quả có cấu trúc phân trang
+            return res.json({
+                items,
+                pager: {
+                    currentPage: page,
+                    perPage: limit,
+                    totalItems: total,
+                    totalPages: totalPages
+                }
+            });
+
+        } catch (error) {
+            Log.error(`Lỗi khi lấy danh sách yêu cầu rút tiền: ${error.stack}`);
+            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+        }
     }
 
     /**
@@ -217,27 +280,37 @@ class ApprovalController {
      * Dành cho admin.
      */
     public static async listWithdrawals(req: Request, res: Response): Promise<Response> {
-        const { status, page = 1, limit = 15 } = req.query;
-        const offset = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
+        // Lấy các tham số từ query string
+        const site = req.site as ISite;
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 15;
+        const status = req.query.status as WithdrawalStatus | undefined; // ví dụ: 'pending', 'approved'
+        const offset = (page - 1) * limit;
 
         try {
-            const { items, total } = await WithdrawalRequest.findAll({
-                status: status as any,
-                limit: parseInt(limit as string, 10),
-                offset
+            // Gọi hàm model với các tùy chọn đã lấy được
+            const { items, total } = await WithdrawalRequest.findAndCountAll({
+                status,
+                limit,
+                offset,
+                site_id: site.id
             });
 
+            const totalPages = Math.ceil(total / limit);
+
+            // Trả về kết quả có cấu trúc phân trang
             return res.json({
                 items,
                 pager: {
-                    currentPage: parseInt(page as string, 10),
-                    perPage: parseInt(limit as string, 10),
+                    currentPage: page,
+                    perPage: limit,
                     totalItems: total,
-                    totalPages: Math.ceil(total / parseInt(limit as string, 10))
+                    totalPages: totalPages
                 }
             });
+
         } catch (error) {
-            Log.error(`Lỗi khi admin lấy danh sách yêu cầu rút tiền: ${error.stack}`);
+            Log.error(`Lỗi khi lấy danh sách yêu cầu rút tiền: ${error.stack}`);
             return res.status(500).json({ error: 'Lỗi máy chủ.' });
         }
     }

@@ -6,6 +6,7 @@ import Site, { ISite } from "../../../models/Site"; // Dùng để lấy siteId 
 import SubscriptionPlan from '../../../models/SubscriptionPlan'; // <-- Import
 import PricingPlan from '../../../models/PricingPlan';         // <-- Import
 import DiscountCode from '../../../models/DiscountCode'; // <-- Import
+import SiteUtils from '../../../utils/SiteUtils'; // <-- Import SiteUtils
 
 
 interface AuthenticatedAdmin {
@@ -209,17 +210,22 @@ class SiteAdminController {
     ): Promise<Response> {
         const admin = req.user as unknown as AuthenticatedAdmin;
 
-        // Lấy thông tin site từ domain để có siteId
-        const site = req.site as ISite;
-
-        if(!admin.isAdmin || admin.id != site.user_id) {
-            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
-        }
-
         try {
+            // Sử dụng SiteUtils để get siteId và check permissions
+            const siteId = SiteUtils.getSiteId(req);
+            const hasAccess = await SiteUtils.hasAdminAccess(req, admin.id, admin.isAdmin);
+
+            if (!hasAccess) {
+                return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+            }
+
+            // Log action với site context
+            SiteUtils.logWithSiteContext(req, `Admin ${admin.id} requested subscription plans`);
+
             const plans = await SubscriptionPlan.findAll({
-                userId: admin.id
+                siteId: siteId
             });
+            
             return res.json(plans);
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách gói dịch vụ: ${error.stack}`);
@@ -240,7 +246,7 @@ class SiteAdminController {
         const planId = req.query.planId ? Number(req.query.planId) : null;
 
         try {
-            const pricingPlans = await PricingPlan.findAllByPlanId(planId);
+            const pricingPlans = await PricingPlan.findAllByPlanId(planId, site.id); // Thêm site.id để filter theo site
             return res.json(pricingPlans);
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách gói giá: ${error.stack}`);
@@ -252,6 +258,13 @@ class SiteAdminController {
      */
     public static async createSubscriptionPlan(req: Request, res: Response): Promise<Response> {
         const { name, description, max_concurrent_jobs, options } = req.body;
+        const admin = req.user as unknown as AuthenticatedAdmin;
+        const site = req.site as ISite;
+
+        // Kiểm tra quyền
+        if(!admin.isAdmin || admin.id != site.user_id) {
+            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+        }
 
         if (!name || max_concurrent_jobs === undefined) {
             return res.status(400).json({ error: 'Tên gói (name) và giới hạn công việc (max_concurrent_jobs) là bắt buộc.' });
@@ -259,6 +272,7 @@ class SiteAdminController {
 
         try {
             const newPlan = await SubscriptionPlan.create({
+                site_id: site.id, // Thêm site_id
                 name,
                 description,
                 max_concurrent_jobs,
@@ -276,20 +290,28 @@ class SiteAdminController {
      */
     public static async createPricingPlan(req: Request, res: Response): Promise<Response> {
         const { plan_id, name, price, currency = 'VND', duration_days, start_date, end_date } = req.body;
+        const admin = req.user as unknown as AuthenticatedAdmin;
+        const site = req.site as ISite;
+
+        // Kiểm tra quyền
+        if(!admin.isAdmin || admin.id != site.user_id) {
+            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+        }
 
         if (!plan_id || !name || price === undefined || !duration_days) {
             return res.status(400).json({ error: 'plan_id, name, price, và duration_days là bắt buộc.' });
         }
 
         try {
-            // Kiểm tra xem plan_id có tồn tại không
-            const subscriptionPlan = await SubscriptionPlan.findById(plan_id);
+            // Kiểm tra xem plan_id có tồn tại và thuộc về site này không
+            const subscriptionPlan = await SubscriptionPlan.findByIdAndSite(plan_id, site.id);
             if (!subscriptionPlan) {
-                return res.status(404).json({ error: `Không tìm thấy gói dịch vụ với ID: ${plan_id}.` });
+                return res.status(404).json({ error: `Không tìm thấy gói dịch vụ với ID: ${plan_id} trong site này.` });
             }
 
             const newPricingPlan = await PricingPlan.create({
                 plan_id,
+                site_id: site.id, // Thêm site_id
                 name,
                 price,
                 currency,
@@ -307,6 +329,13 @@ class SiteAdminController {
 
     public static async createDiscountCode(req: Request, res: Response): Promise<Response> {
         const { code, discount_type, discount_value, description, max_uses, expires_at } = req.body;
+        const admin = req.user as unknown as AuthenticatedAdmin;
+        const site = req.site as ISite;
+
+        // Kiểm tra quyền
+        if(!admin.isAdmin || admin.id != site.user_id) {
+            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+        }
 
         if (!code || !discount_type || discount_value === undefined) {
             return res.status(400).json({ error: 'code, discount_type, và discount_value là bắt buộc.' });
@@ -317,6 +346,7 @@ class SiteAdminController {
 
         try {
             const newCode = await DiscountCode.create({
+                site_id: site.id, // Thêm site_id
                 code,
                 discount_type,
                 discount_value,

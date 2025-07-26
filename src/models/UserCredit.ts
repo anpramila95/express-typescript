@@ -133,6 +133,29 @@ class UserCredit {
         }
     }
 
+    //addPackage
+    /**
+     * Cộng credit từ một gói credit package cho người dùng.
+     */
+    public static async addPackage(
+        userId: number,
+        packageId: number,
+        sourceTransactionId?: number
+    ): Promise<boolean> {
+        const sql = `
+            INSERT INTO user_credits (user_id, credits, type, expires_at, source_transaction_id) 
+            SELECT ?, credits_amount, 'purchased', DATE_ADD(NOW(), INTERVAL 30 DAY), ?
+            FROM credit_packages WHERE id = ?
+        `;
+
+        try {
+            await Database.pool.execute(sql, [userId, sourceTransactionId, packageId]);
+            return true;
+        } catch (error) {
+            Log.error(`[UserCreditModel] Lỗi khi cộng credit từ gói cho user ${userId}: ${error.stack}`);
+            throw error;
+        }
+    }
     /**
      * Trừ credit của người dùng, ưu tiên các gói sắp hết hạn trước.
      */

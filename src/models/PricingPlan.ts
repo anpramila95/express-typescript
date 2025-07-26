@@ -5,6 +5,7 @@ import type * as mysql from 'mysql2';
 export interface IPricingPlan {
     id: number;
     plan_id: number;
+    site_id: number; // Thêm site_id để kiểm soát quyền truy cập
     price: number;
     currency: string;
     duration_days: number;
@@ -22,6 +23,7 @@ class PricingPlan {
         return {
             id: row.id,
             plan_id: row.plan_id,
+            site_id: row.site_id, // Thêm site_id từ database
             price: parseFloat(row.price),
             currency: row.currency,
             duration_days: row.duration_days,
@@ -48,12 +50,27 @@ class PricingPlan {
             throw error;
         }
     }
+    //findByIdSiteId
+    public static async findByIdSiteId(id: number, siteId: number): Promise<IPricingPlan | null> {
+        const sql = 'SELECT * FROM pricing_plans WHERE id = ? AND site_id = ?';
+        try {
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [id, siteId]);
+            if (rows.length > 0) {
+                return this.parse(rows[0]);
+            }
+            return null;
+        } catch (error) {
+            Log.error(`[PricingPlanModel] Lỗi khi tìm gói giá bằng ID ${id} và site ID ${siteId}: ${error.message}`);
+            throw error;
+        }
+    }
 
     /**
      * Admin tạo một gói giá mới cho một Subscription Plan.
      */
     public static async create(data: {
         plan_id: number;
+        site_id: number; // Thêm site_id parameter
         name: string;
         price: number;
         currency: string;
@@ -62,12 +79,13 @@ class PricingPlan {
         end_date?: Date;
     }): Promise<IPricingPlan> {
         const sql = `
-            INSERT INTO pricing_plans (plan_id, name, price, currency, duration_days, start_date, end_date, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+            INSERT INTO pricing_plans (plan_id, site_id, name, price, currency, duration_days, start_date, end_date, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
                 data.plan_id,
+                data.site_id, // Thêm site_id vào query
                 data.name,
                 data.price,
                 data.currency,
@@ -88,13 +106,60 @@ class PricingPlan {
         }
     }
 
-    public static async findAllByPlanId(plan_id: number): Promise<IPricingPlan[]> {
-        const sql = 'SELECT * FROM pricing_plans WHERE plan_id = ? AND status = "active"';
+    public static async findAllByPlanId(plan_id: number, siteId?: number): Promise<IPricingPlan[]> {
+        let sql = 'SELECT * FROM pricing_plans WHERE plan_id = ? AND status = "active"';
+        const params: any[] = [plan_id];
+        
+        if (siteId) {
+            sql += ' AND site_id = ?';
+            params.push(siteId);
+        }
+        
         try {
-            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [plan_id]);
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, params);
             return rows.map(this.parse);
         } catch (error) {
             Log.error(`[PricingPlanModel] Lỗi khi lấy tất cả gói giá cho plan ID ${plan_id}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Thêm method để lấy pricing plan theo site
+    public static async findAllBySiteId(siteId: number): Promise<IPricingPlan[]> {
+        const sql = 'SELECT * FROM pricing_plans WHERE site_id = ? AND status = "active"';
+        try {
+            const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, [siteId]);
+            return rows.map(this.parse);
+        } catch (error) {
+            Log.error(`[PricingPlanModel] Lỗi khi lấy tất cả gói giá cho site ID ${siteId}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Thêm method để update pricing plan với site check
+    public static async update(id: number, siteId: number, data: Partial<Omit<IPricingPlan, 'id' | 'site_id'>>): Promise<boolean> {
+        const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+        const values = Object.values(data);
+
+        const sql = `UPDATE pricing_plans SET ${fields} WHERE id = ? AND site_id = ?`;
+        
+        try {
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [...values, id, siteId]);
+            return result.affectedRows > 0;
+        } catch (error) {
+            Log.error(`[PricingPlanModel] Lỗi khi cập nhật gói giá ID ${id}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Thêm method để delete pricing plan với site check
+    public static async delete(id: number, siteId: number): Promise<boolean> {
+        const sql = 'DELETE FROM pricing_plans WHERE id = ? AND site_id = ?';
+        try {
+            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [id, siteId]);
+            return result.affectedRows > 0;
+        } catch (error) {
+            Log.error(`[PricingPlanModel] Lỗi khi xóa gói giá ID ${id}: ${error.message}`);
             throw error;
         }
     }
