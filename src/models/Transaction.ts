@@ -22,6 +22,12 @@ export interface ITransaction {
     created_at: Date;
     updated_at: Date;
     meta?: any; // Thông tin bổ sung, có thể là JSON
+     // ... các trường hiện có
+    payment_gateway?: 'stripe' | 'paypal' | 'crypto' | 'bank_transfer'; // Cổng thanh toán
+    gateway_transaction_id?: string; // ID giao dịch từ cổng thanh toán
+    
+    // Thêm các trường cần thiết khác nếu có
+    
 }
 
 export interface ITransactionWithPayment extends ITransaction {
