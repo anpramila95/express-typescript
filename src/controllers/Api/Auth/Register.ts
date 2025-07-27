@@ -9,6 +9,10 @@ import User from '../../../models/User';
 import Log from '../../../middlewares/Log';
 import Site, {ISite} from '../../../models/Site';
 
+/** event */
+import Event from '../../../providers/Event';
+import { events } from '../../../events/definitions';
+
 class Register {
 	public static async perform (req: Request, res: Response): Promise<any> {
 		req.assert('email', 'E-mail cannot be blank').notEmpty();
@@ -31,6 +35,7 @@ class Register {
 			}
 
 			let affiliate_id = req.body.affiliate_id || null;
+
 			//check affiliate_id
 			if (affiliate_id) {
 				const affiliate = await User.findById(affiliate_id, site.id);
@@ -47,6 +52,8 @@ class Register {
 			});
 
 			await user.save();
+
+			Event.emit(events.user.created, { user }); //su kien
 
 			return res.json({
 				message: 'You have been successfully registered!'

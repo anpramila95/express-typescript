@@ -15,6 +15,8 @@ import Queue from './Queue';
 import Worker from '../workers'; // Import worker của bạn
 import Locals from './Locals';
 import Log from '../middlewares/Log';
+import { RegisterEvents } from '../events'; // <-- Thêm import
+
 
 class App {
 	// Clear the console
@@ -64,6 +66,12 @@ class App {
 			console.log('\x1b[33m%s\x1b[0m', `Queue Monitor :: Running @ 'http://localhost:${queueMonitorPort}'`);
 		}
 	}
+
+	public loadProviders(): void {
+        // ...
+        Log.info('Booting the \'Event\' provider...');
+        RegisterEvents(); // <-- Đăng ký các sự kiện tại đây
+    }
 }
 
 export default new App;

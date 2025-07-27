@@ -12,6 +12,7 @@ import { IUser } from '../interfaces/models/user';
 import Log from '../middlewares/Log';
 import { ISite } from './Site'; // Import ISite interface
 
+
 export class User implements IUser {
 
     public id: number;
@@ -34,7 +35,11 @@ export class User implements IUser {
     public affiliate_id: number | null; // Required affiliate ID to match IUser
     public site_id: number; // Required site ID
     public knownIPs?: string[]; // Optional, can be added later if needed
-
+    public two_fa_secret?: string;
+    public two_fa_enabled?: boolean;
+    public instagram: string;
+    public linkedin: string;
+    public steam: string;
 
     constructor(user: any) {
         this.id = user.id;
@@ -58,10 +63,9 @@ export class User implements IUser {
         this.affiliate_id = user.affiliate_id ?? null; // Ensure affiliate_id is always present
         this.site_id = user.site_id;
         this.knownIPs = user.knownIPs || [];
+        this.two_fa_enabled = user.two_fa_enabled || false;
+        this.two_fa_secret = user.two_fa_secret || null;
     }
-    public instagram: string;
-    public linkedin: string;
-    public steam: string;
 
 
     /**
@@ -190,7 +194,7 @@ export class User implements IUser {
         `;
 
         try {
-            const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [
+            const [result] = await Database.pool.execute<ResultSetHeader>(sql, [
                 userData.site_id,
                 userData.fullname,
                 userData.email,
@@ -212,6 +216,7 @@ export class User implements IUser {
      * Creates a new user
      */
     public async save(): Promise<User> {
+        
         // Hash password if it exists and has been modified
         if (this.password) {
             const salt = await bcrypt.genSalt(10);
@@ -259,7 +264,7 @@ export class User implements IUser {
      * Cập nhật thông tin người dùng
      */
 
-    public static async update(data: Partial<IUser>, userId: number): Promise<User> {
+    public static async update(data: Partial<IUser>, userId: number): Promise<boolean | void> {
         // Chỉ cập nhật các trường có trong data
         const fields = [];
         const values = [];
@@ -306,7 +311,7 @@ export class User implements IUser {
         }
         if (data.site_id) {
             fields.push('site_id = ?');
-            values.push(data.site_id);        
+            values.push(data.site_id);
         }
         if (data.password) {
             const salt = await bcrypt.genSalt(10);
@@ -321,7 +326,7 @@ export class User implements IUser {
         const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
         try {
             await Database.pool.execute(sql, values);
-            return this;
+            return true;
         } catch (error) {
             Log.error(`Error updating user: ${error.message}`);
             throw error;
@@ -419,11 +424,11 @@ export class User implements IUser {
 
         try {
             const [rows] = await Database.pool.query<RowDataPacket[]>(sql, [userId]);
-            
+
             // rows sẽ là một mảng các object, ví dụ: [{ name: 'users.invite' }, { name: 'transactions.view' }]
             // Chúng ta cần chuyển nó thành một mảng các chuỗi: ['users.invite', 'transactions.view']
             const permissions = rows.map(row => row.name);
-            
+
             return permissions;
         } catch (error) {
             Log.error(`[UserModel] Lỗi khi lấy quyền cho người dùng ${userId}: ${error}`);
@@ -432,10 +437,10 @@ export class User implements IUser {
         }
     }
 
-     /**
-     * Gán một vai trò cho một người dùng. 
-     * Xóa các vai trò cũ trước khi gán vai trò mới để đảm bảo mỗi user chỉ có 1 role.
-     */
+    /**
+    * Gán một vai trò cho một người dùng. 
+    * Xóa các vai trò cũ trước khi gán vai trò mới để đảm bảo mỗi user chỉ có 1 role.
+    */
     public static async assignRole(userId: number, roleId: number, siteId: number): Promise<boolean> {
         const connection = await Database.pool.getConnection();
         try {
@@ -463,6 +468,20 @@ export class User implements IUser {
             connection.release();
         }
     }
+
+    //updateData
+    public static async updateData(userId: number, data: Partial<IUser>): Promise<boolean> {
+        const sql = 'UPDATE users SET ? WHERE id = ?';
+        try {
+            const [result] = await Database.pool.execute<ResultSetHeader>(sql, [data, userId]);
+            return result.affectedRows > 0;
+        } catch (error) {
+            Log.error(`[UserModel] Lỗi khi cập nhật người dùng: ${error}`);
+            throw error;
+        }
+    }
+
+
 }
 
 export default User;

@@ -4,6 +4,7 @@ import type * as mysql from 'mysql2';
 import { ISubscriptionPlan } from './SubscriptionPlan';
 import PricingPlan, { IPricingPlan } from './PricingPlan'; // <-- Chỉ thêm dòng import này
 
+
 export interface ISubscription {
     id: number;
     user_id: number;
@@ -26,7 +27,7 @@ class Subscription {
             s.expires_at,
             pp.name AS pricing_name
         FROM
-            subscriptions s
+            user_subscriptions s
         JOIN
             subscription_plans sp ON s.plan_id = sp.id
         LEFT JOIN
@@ -65,17 +66,17 @@ class Subscription {
         }
     }
     /**
-     * Deactivates all currently active subscriptions for a user.
+     * Deactivates all currently active user_subscriptions for a user.
      * (Hàm này giữ nguyên, không thay đổi)
      */
     public static async deactivateAllForUser(userId: number): Promise<boolean> {
         // ... code gốc của hàm này ...
-        const sql = "UPDATE subscriptions SET status = 'canceled', active_user_id = NULL WHERE user_id = ? AND status = 'active'";
+        const sql = "UPDATE user_subscriptions SET status = 'canceled', active_user_id = NULL WHERE user_id = ? AND status = 'active'";
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [userId]);
             return result.affectedRows > 0;
         } catch (error) {
-            Log.error(`[SubscriptionModel] Error deactivating subscriptions for user ${userId}: ${error.message}`);
+            Log.error(`[SubscriptionModel] Error deactivating user_subscriptions for user ${userId}: ${error.message}`);
             throw error;
         }
     }
@@ -91,7 +92,7 @@ class Subscription {
         }
 
         const sql = `
-            INSERT INTO subscriptions (user_id, plan_id, pricing_id, status, active_user_id, expires_at, site_id)
+            INSERT INTO user_subscriptions (user_id, plan_id, pricing_id, status, active_user_id, expires_at, site_id)
             VALUES (?, ?, ?, 'active', ?, NOW() + INTERVAL ? DAY, ?)
         `;
 

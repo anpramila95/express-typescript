@@ -22,6 +22,7 @@ export interface IMedia {
     status: 'pending' | 'processing' | 'completed' | 'failed' | 'upload-waiting';
     meta?: any; // To store JSON data
     created_at?: Date;
+    folder_id?: number
 }
 
 export class Media {
@@ -222,6 +223,17 @@ export class Media {
             throw error;
         }
     }
+
+       /**
+     * Di chuyển nhiều file media của người dùng vào một thư mục.
+     */
+    public static async moveMultiple(mediaIds: number[], newFolderId: number | null, userId: number): Promise<boolean> {
+        if (mediaIds.length === 0) return true;
+        const sql = 'UPDATE medias SET folder_id = ? WHERE id IN (?) AND user_id = ?';
+        const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [newFolderId, mediaIds, userId]);
+        return result.affectedRows > 0;
+    }
+
 }
 
 export default Media;

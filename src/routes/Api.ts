@@ -40,6 +40,8 @@ router.post('/auth/register', RegisterController.perform);
 router.post('/auth/refresh-token', expressJwt({ secret: Locals.config().appSecret }), RefreshTokenController.perform);
 router.post('/auth/forgot', PasswordController.forgot);
 router.post('/auth/reset/:token', PasswordController.reset);
+router.post('/auth/login/2fa', LoginController.verify2FA); // Route cho bước 2 của login
+
 
 
 // --- API Key Management Routes ---
@@ -58,10 +60,24 @@ router.post('/media/upload', FlexibleAuthMiddleware.authenticate, upload.single(
 router.post('/media/import', FlexibleAuthMiddleware.authenticate, MediaController.importVideo);
 router.delete('/media/:id', FlexibleAuthMiddleware.authenticate, MediaController.delete);
 router.post('/media/gen-ai', FlexibleAuthMiddleware.authenticate, MediaController.generateAi);
+// Lấy nội dung thư mục gốc (root)
+router.get('/media/folders', FlexibleAuthMiddleware.authenticate, MediaController.getFolderContents);
+// Lấy nội dung của một thư mục cụ thể bằng ID
+router.get('/media/folders/:folderId', FlexibleAuthMiddleware.authenticate, MediaController.getFolderContents);
+// Tạo một thư mục mới
+router.post('/media/folders', FlexibleAuthMiddleware.authenticate, MediaController.createFolder);
+// Di chuyển một hoặc nhiều items (files/folders)
+router.post('/media/move-items', FlexibleAuthMiddleware.authenticate, MediaController.moveItems);
 
-//account ìno
+
+//account info
 router.get('/account/info', FlexibleAuthMiddleware.authenticate, AccountInfoController.getInfo); // <-- Route mới
 router.put('/account/info', FlexibleAuthMiddleware.authenticate, ProfileController.update);
+// --- ACCOUNT ROUTES (Yêu cầu đã đăng nhập) ---
+router.post('/account/2fa/setup', FlexibleAuthMiddleware.authenticate, AccountInfoController.setup);
+router.post('/account/2fa/verify', FlexibleAuthMiddleware.authenticate, AccountInfoController.verifyAndEnable);
+router.post('/account/2fa/disable', FlexibleAuthMiddleware.authenticate, AccountInfoController.disable);
+
 
 // == NOTIFICATION ROUTES ==
 // Phải đăng nhập mới dùng được các API này (nhờ checkAuth)
@@ -92,7 +108,7 @@ router.get('/affiliate/direct-downline', FlexibleAuthMiddleware.authenticate, Af
 // == ADMIN-ONLY ROUTES ==
 const adminRouter = Router();
 // Bạn cần tạo middleware AdminMiddleware.isAdmin để kiểm tra quyền admin của user
-adminRouter.use(AdminMiddleware.authenticate); 
+adminRouter.use(AdminMiddleware.authenticate);
 
 // Route để quản lý các yêu cầu đang chờ xử lý
 adminRouter.get('/transactions/pending', ApprovalController.listPending);

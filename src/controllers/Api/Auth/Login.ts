@@ -11,8 +11,12 @@ import User from '../../../models/User';
 import Site, { ISite } from '../../../models/Site';
 import BlockedUser from '../../../models/BlockedUser'; // <-- 1. Import model BlockedUser
 import Log from '../../../middlewares/Log';
-import MailService from '../../../services/MailService';
+import * as speakeasy from 'speakeasy';
 
+
+/** event */
+import Event from '../../../providers/Event';
+import { events } from '../../../events/definitions';
 
 class Login {
     public static async perform(req: Request, res: Response): Promise<any> {
@@ -65,6 +69,7 @@ class Login {
                 });
             }
 
+
             const isMatch = await user.comparePassword(password);
             if (!isMatch) {
                 return res.status(401).json({
@@ -78,16 +83,24 @@ class Login {
                 isAdmin = true; // Người dùng là chủ sở hữu của site
             }
 
-            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+            // KIỂM TRA 2FA
+            if (user.two_fa_enabled) {
+                // Nếu 2FA đã được bật, trả về thông báo yêu cầu xác thực bước 2
+                // Tạo một token tạm thời để biết user nào đang chờ xác thực 2FA
+                const tempToken = jwt.sign(
+                    { id: user.id, action: '2fa_verify' },
+                    res.locals.app.appSecret,
+                    { expiresIn: '5m' } // Token tạm thời chỉ có hiệu lực 5 phút
+                );
 
-            // Kiểm tra IP lạ (bạn cần triển khai logic này trong User model)
-            const isNewIP = await user.isNewIP(ip as string);
-            if (isNewIP) {
-                const message = `<p>Your account was just accessed from a new IP address: ${ip}.</p>
-                                 <p>If this was you, you can safely ignore this email.</p>`;
-                await MailService.sendMail(user.email, 'New Login Alert', message);
+                return res.status(200).json({
+                    message: 'Please provide your 2FA token.',
+                    two_factor_required: true,
+                    temp_token: tempToken
+                });
             }
 
+            Event.emit(events.user.loggedIn, { user, site }); // Emit sự kiện đăng nhập
 
             const token = jwt.sign(
                 { id: user.id, email: user.email, isAdmin: isAdmin, siteId: site.id },
@@ -109,6 +122,54 @@ class Login {
             return res.status(500).json({
                 error: err.message
             });
+        }
+    }
+
+     /**
+     * Giai đoạn 2: Xác thực mã 2FA
+     */
+    public static async verify2FA(req: Request, res: Response): Promise<any> {
+        const { temp_token, two_fa_token } = req.body;
+
+        if (!temp_token || !two_fa_token) {
+            return res.status(400).json({ error: 'Temporary token and 2FA token are required.' });
+        }
+
+        try {
+            const decoded: any = jwt.verify(temp_token, res.locals.app.appSecret);
+            if (decoded.action !== '2fa_verify') {
+                return res.status(401).json({ error: 'Invalid temporary token.' });
+            }
+
+            const user = await User.findById(decoded.id);
+            if (!user || !user.two_fa_enabled || !user.two_fa_secret) {
+                return res.status(401).json({ error: '2FA is not enabled for this user.' });
+            }
+
+            const verified = speakeasy.totp.verify({
+                secret: user.two_fa_secret,
+                encoding: 'base32',
+                token: two_fa_token,
+                window: 1 // Cho phép chênh lệch thời gian 1 khoảng (30s)
+            });
+
+            if (!verified) {
+                return res.status(401).json({ error: 'Invalid 2FA token.' });
+            }
+
+            // Nếu mã 2FA chính xác, tạo token đăng nhập cuối cùng
+            const isAdmin = user.isAdmin ? true : false;
+            const finalToken = jwt.sign(
+                { email: user.email, id: user.id, isAdmin: isAdmin },
+                res.locals.app.appSecret,
+                { expiresIn: res.locals.app.jwtExpiresIn * 60 }
+            );
+
+            user.password = undefined;
+            return res.json({ user, token: finalToken, token_expires_in: res.locals.app.jwtExpiresIn * 60 });
+
+        } catch (error) {
+            return res.status(401).json({ error: 'Invalid or expired temporary token.' });
         }
     }
 }

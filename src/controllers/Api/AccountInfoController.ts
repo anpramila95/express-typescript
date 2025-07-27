@@ -7,6 +7,8 @@ import Log from '../../middlewares/Log';
 import { ISite } from '../../models/Site'; // Import interface ISite
 import Notification from '../../models/Notification';
 import { IUser } from '../../interfaces/models/user';
+import * as speakeasy from 'speakeasy';
+import * as qrcode from 'qrcode';
 
 interface AuthenticatedUser {
     id: number;
@@ -144,6 +146,74 @@ class AccountInfoController {
             Log.error(`[NotificationController] ${error}`);
             return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
         }
+    }
+
+
+    /**
+     * Bắt đầu quá trình thiết lập 2FA.
+     * Tạo ra một secret và mã QR để người dùng quét.
+     */
+    public static async setup(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+
+        const secret = speakeasy.generateSecret({
+            name: `YourAppName (${user.email})` // Tên sẽ hiển thị trên app Authenticator
+        });
+
+        // Tạm thời lưu secret vào user object để xác thực ở bước sau
+        // Trong ứng dụng thực tế, bạn có thể lưu vào session hoặc cache
+        await User.updateData(user.id, { two_fa_secret: secret.base32 });
+
+        const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
+
+        return res.json({
+            message: 'Scan this QR code with your authenticator app.',
+            secret: secret.base32, // Gửi secret để user có thể nhập thủ công
+            qrCode: qrCodeDataURL
+        });
+    }
+
+    /**
+     * Xác thực mã TOTP và chính thức bật 2FA
+     */
+    public static async verifyAndEnable(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const { token } = req.body;
+
+        if (!user.two_fa_secret) {
+            return res.status(400).json({ error: '2FA secret not found. Please setup first.' });
+        }
+
+        const verified = speakeasy.totp.verify({
+            secret: user.two_fa_secret,
+            encoding: 'base32',
+            token: token
+        });
+
+        if (verified) {
+            // Nếu mã chính xác, bật 2FA
+            await User.updateData(user.id, { two_fa_enabled: true });
+            return res.json({ message: '2FA has been enabled successfully.' });
+        }
+
+        return res.status(400).json({ error: 'Invalid token. Please try again.' });
+    }
+
+    /**
+     * Vô hiệu hóa 2FA
+     */
+    public static async disable(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        // Cần xác thực lại mật khẩu trước khi cho phép vô hiệu hóa
+        const { password } = req.body;
+        // ... (thêm logic kiểm tra password ở đây)
+
+        await User.updateData(user.id, {
+            two_fa_enabled: false,
+            two_fa_secret: null // Xóa secret
+        });
+
+        return res.json({ message: '2FA has been disabled.' });
     }
 }
 

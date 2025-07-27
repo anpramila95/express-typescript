@@ -12,8 +12,9 @@ import Queue from '../../providers/Queue'; // Hệ thống hàng đợi đã có
 import Log from '../../middlewares/Log';
 import Locals from '../../providers/Locals';
 import SubscriptionService from '../../services/SubscriptionService'; // Import service mới
-
-
+import Folder from '../../models/Folder';
+import {IUser} from '../../interfaces/models/user'; // Import IUser interface
+import {Database} from '../../providers/Database';
 
 interface AuthenticatedUser {
     id: number;
@@ -250,6 +251,81 @@ class MediaController {
             return res.status(500).json({ error: 'Không thể xóa media.' });
         }
     }
+
+     /**
+     * Lấy nội dung của một thư mục (bao gồm thư mục con và file).
+     */
+    public static async getFolderContents(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const folderId = req.params.folderId ? Number(req.params.folderId) : null;
+
+        try {
+            const contents = await Folder.getContents(user.id, folderId);
+            return res.json(contents);
+        } catch (error) {
+            return res.status(500).json({ error: 'Không thể lấy dữ liệu thư mục.' });
+        }
+    }
+
+    /**
+     * Tạo một thư mục mới.
+     */
+    public static async createFolder(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const { name, parentId = null } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ error: 'Tên thư mục là bắt buộc.' });
+        }
+
+        try {
+            const newFolder = await Folder.create(user.id, parentId, name);
+            return res.status(201).json({ message: 'Tạo thư mục thành công.', ...newFolder });
+        } catch (error) {
+            return res.status(500).json({ error: 'Không thể tạo thư mục.' });
+        }
+    }
+
+    /**
+     * Di chuyển một hoặc nhiều file và thư mục.
+     */
+    public static async moveItems(req: Request, res: Response): Promise<Response> {
+        const user = req.user as IUser;
+        const { items, newParentId = null } = req.body;
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Trường "items" phải là một mảng và không được rỗng.' });
+        }
+
+        const folderIdsToMove: number[] = items
+            .filter(item => item.type === 'folder' && item.id)
+            .map(item => Number(item.id));
+        
+        const fileIdsToMove: number[] = items
+            .filter(item => item.type === 'file' && item.id)
+            .map(item => Number(item.id));
+
+        const connection = await Database.pool.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            if(folderIdsToMove.length > 0) {
+                await Folder.moveMultiple(folderIdsToMove, newParentId, user.id);
+            }
+            if(fileIdsToMove.length > 0) {
+                await Media.moveMultiple(fileIdsToMove, newParentId, user.id);
+            }
+            
+            await connection.commit();
+            return res.json({ message: 'Di chuyển các mục đã chọn thành công.' });
+        } catch (error) {
+            await connection.rollback();
+            return res.status(500).json({ error: 'Đã có lỗi xảy ra trong quá trình di chuyển.' });
+        } finally {
+            connection.release();
+        }
+    }
+
 }
 
 export default MediaController;
