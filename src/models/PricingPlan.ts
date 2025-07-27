@@ -109,12 +109,12 @@ class PricingPlan {
     public static async findAllByPlanId(plan_id: number, siteId?: number): Promise<IPricingPlan[]> {
         let sql = 'SELECT * FROM pricing_plans WHERE plan_id = ? AND status = "active"';
         const params: any[] = [plan_id];
-        
+
         if (siteId) {
             sql += ' AND site_id = ?';
             params.push(siteId);
         }
-        
+
         try {
             const [rows] = await Database.pool.query<mysql.RowDataPacket[]>(sql, params);
             return rows.map(this.parse);
@@ -142,7 +142,7 @@ class PricingPlan {
         const values = Object.values(data);
 
         const sql = `UPDATE pricing_plans SET ${fields} WHERE id = ? AND site_id = ?`;
-        
+
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [...values, id, siteId]);
             return result.affectedRows > 0;
