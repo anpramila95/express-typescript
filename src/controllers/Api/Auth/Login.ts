@@ -129,10 +129,10 @@ class Login {
      * Giai đoạn 2: Xác thực mã 2FA
      */
     public static async verify2FA(req: Request, res: Response): Promise<any> {
-        const { temp_token, two_fa_token } = req.body;
+        const { temp_token, code } = req.body;
 
-        if (!temp_token || !two_fa_token) {
-            return res.status(400).json({ error: 'Temporary token and 2FA token are required.' });
+        if (!temp_token || !code) {
+            return res.status(400).json({ error: 'Temporary token and 2FA code are required.' });
         }
 
         try {
@@ -149,12 +149,12 @@ class Login {
             const verified = speakeasy.totp.verify({
                 secret: user.two_fa_secret,
                 encoding: 'base32',
-                token: two_fa_token,
+                token: code,
                 window: 1 // Cho phép chênh lệch thời gian 1 khoảng (30s)
             });
 
             if (!verified) {
-                return res.status(401).json({ error: 'Invalid 2FA token.' });
+                return res.status(401).json({ error: 'Invalid 2FA code.' });
             }
 
             // Nếu mã 2FA chính xác, tạo token đăng nhập cuối cùng

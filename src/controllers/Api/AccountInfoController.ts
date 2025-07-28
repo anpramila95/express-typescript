@@ -180,12 +180,14 @@ class AccountInfoController {
         const user = req.user as IUser;
         const { token } = req.body;
 
-        if (!user.two_fa_secret) {
+        const getUser = await User.findById(user.id);
+
+        if (!getUser.two_fa_secret) {
             return res.status(400).json({ error: '2FA secret not found. Please setup first.' });
         }
 
         const verified = speakeasy.totp.verify({
-            secret: user.two_fa_secret,
+            secret: getUser.two_fa_secret,
             encoding: 'base32',
             token: token
         });
@@ -204,13 +206,27 @@ class AccountInfoController {
      */
     public static async disable(req: Request, res: Response): Promise<Response> {
         const user = req.user as IUser;
-        // Cần xác thực lại mật khẩu trước khi cho phép vô hiệu hóa
         const { password } = req.body;
-        // ... (thêm logic kiểm tra password ở đây)
+
+        if (!password) {
+            return res.status(400).json({ error: 'Vui lòng nhập mật khẩu.' });
+        }
+
+        // Lấy thông tin user từ DB để kiểm tra mật khẩu
+        const userFromDb = await User.findById(user.id);
+        if (!userFromDb) {
+            return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+        }
+
+        // Giả sử User model có phương thức comparePassword
+        const isMatch = await userFromDb.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Mật khẩu không đúng.' });
+        }
 
         await User.updateData(user.id, {
             two_fa_enabled: false,
-            two_fa_secret: null // Xóa secret
+            two_fa_secret: null
         });
 
         return res.json({ message: '2FA has been disabled.' });

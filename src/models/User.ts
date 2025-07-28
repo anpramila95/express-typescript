@@ -471,12 +471,21 @@ export class User implements IUser {
 
     //updateData
     public static async updateData(userId: number, data: Partial<IUser>): Promise<boolean> {
-        const sql = 'UPDATE users SET ? WHERE id = ?';
+        // Dynamically build SET clause and values
+        const fields = Object.keys(data);
+        if (fields.length === 0) {
+            throw new Error('No fields to update.');
+        }
+        const setClause = fields.map(field => `${field} = ?`).join(', ');
+        const values = fields.map(field => (field === 'tokens' && Array.isArray(data[field]) ? JSON.stringify(data[field]) : data[field]));
+        values.push(userId);
+
+        const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
         try {
-            const [result] = await Database.pool.execute<ResultSetHeader>(sql, [data, userId]);
+            const [result] = await Database.pool.execute<ResultSetHeader>(sql, values);
             return result.affectedRows > 0;
         } catch (error) {
-            Log.error(`[UserModel] Lỗi khi cập nhật người dùng: ${error}`);
+            Log.error(`[UserModel] Error updating user: ${error}`);
             throw error;
         }
     }
