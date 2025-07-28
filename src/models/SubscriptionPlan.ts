@@ -1,15 +1,17 @@
 import Database from '../providers/Database';
 import Log from '../middlewares/Log';
 import type * as mysql from 'mysql2';
+export interface IPlanFeatures {
+    [key: string]: string | number | boolean; // Cho phép key là string, value là string, number, hoặc boolean
+}
 
 export interface ISubscriptionPlan {
     id: number;
     site_id: number; // Thay đổi từ user_id thành site_id để rõ ràng hơn
     name: string;
     description?: string;
-    // Xóa price và currency
     max_concurrent_jobs: number;
-    options?: any;
+    options?: IPlanFeatures;
     pricings?: any[]; // Thêm để chứa các gói giá
     pricing_name?: string; // <-- ADD THIS LINE
     expires_at?: Date | null; // Thêm để chứa ngày hết hạn nếu có

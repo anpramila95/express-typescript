@@ -2,14 +2,54 @@ import Database from '../providers/Database';
 import Log from '../middlewares/Log';
 import type * as mysql from 'mysql2';
 
+//interface site cònig
+export interface SiteConfig {
+    // White label options
+    brand_name?: string; // Tên thương hiệu hiển thị
+    logo_url?: string; // URL logo
+    favicon_url?: string; // URL favicon
+    primary_color?: string; // Màu chủ đạo
+    secondary_color?: string; // Màu phụ
+    support_email?: string; // Email hỗ trợ khách hàng
+    custom_domain?: string; // Domain riêng cho site
+
+    // Payment information
+    payment_provider?: 'stripe' | 'paypal' | 'momo' | 'vnpay' | string; // Nhà cung cấp thanh toán
+    payment_api_key?: string; // API key cho thanh toán
+    payment_secret?: string; // Secret key cho thanh toán
+    billing_address?: string; // Địa chỉ thanh toán
+    tax_id?: string; // Mã số thuế
+    currency?: string; // Đơn vị tiền tệ (VD: USD, VND)
+
+    // Setup/installation info
+    language?: string; // Ngôn ngữ của site
+    timezone?: string; // Múi giờ của site
+    theme?: string; // Tên theme đang sử dụng
+    custom_css?: string; // CSS tùy chỉnh cho site
+    custom_js?: string; // JS tùy chỉnh cho site
+    enable_signup?: boolean; // Cho phép đăng ký tài khoản mới
+    enable_social_login?: boolean; // Cho phép đăng nhập qua mạng xã hội
+    maintenance_mode?: boolean; // Bật chế độ bảo trì
+    maintenance_message?: string; // Thông báo hiển thị khi ở chế độ bảo trì
+    enable_captcha?: boolean; // Bật CAPTCHA cho đăng ký/đăng nhập
+    captcha_site_key?: string; // Site key cho CAPTCHA
+    captcha_secret_key?: string; // Secret key cho CAPTCHA
+    enable_analytics?: boolean; // Bật Google Analytics hoặc công cụ phân tích khác
+    analytics_tracking_id?: string; // ID theo dõi Google Analytics
+    enable_notifications?: boolean; // Bật thông báo cho người dùng
+    notification_email?: string; // Email nhận thông báo
+
+    // Other extensible options
+    [key: string]: any;
+}
 // Interface cho cấu trúc của một Site object
 export interface ISite {
     id: number;
     domain: string;
     user_id: number; // User sở hữu site này
-    configs?: any; // Lưu trữ các cấu hình dưới dạng JSON
+    configs?: SiteConfig; // Lưu trữ các cấu hình dưới dạng JSON
     created_at?: Date;
-    status?: string;
+    status?: 'active' | 'inactive' | 'suspended';
 }
 
 class Site {
