@@ -16,11 +16,11 @@ class RoleController {
         const { name, description } = req.body;
 
         if (!name) {
-            return res.status(400).json({ error: 'Tên vai trò là bắt buộc.' });
+            return res.status(400).json({ error: req.__('role.name_required') });
         }
 
         const result = await Role.create(user.site_id, name, description);
-        return res.status(201).json({ message: 'Tạo vai trò thành công', roleId: result.id });
+        return res.status(201).json({ message: req.__('role.create_success'), roleId: result.id });
     }
 
     /**
@@ -33,7 +33,7 @@ class RoleController {
         const { permissionIds } = req.body; // permissionIds là một mảng các ID
 
         if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
-            return res.status(400).json({ error: 'permissionIds phải là một mảng và không được rỗng.' });
+            return res.status(400).json({ error: req.__('role.permission_ids_required') });
         }
 
         try {
@@ -44,13 +44,13 @@ class RoleController {
 
             // 2. Nếu không tìm thấy vai trò, trả về lỗi 404
             if (!role) {
-                return res.status(404).json({ error: 'Không tìm thấy vai trò này.' });
+                return res.status(404).json({ error: req.__('role.role_not_found') });
             }
 
             // 3. So sánh site_id của vai trò với site_id của admin đang thao tác
             if (role.site_id !== siteAdmin.site_id) {
                 // Nếu không khớp, admin này không có quyền chỉnh sửa vai trò của site khác
-                return res.status(403).json({ error: 'Bạn không có quyền chỉnh sửa vai trò này.' });
+                return res.status(403).json({ error: req.__('role.no_permission_edit') });
             }
 
             // ---- KẾT THÚC PHẦN KIỂM TRA ----
@@ -62,10 +62,10 @@ class RoleController {
                 await Role.assignPermission(Number(roleId), Number(permId));
             }
 
-            return res.json({ message: 'Gán quyền cho vai trò thành công.' });
+            return res.json({ message: req.__('role.assign_permissions_success') });
 
         } catch (error) {
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+            return res.status(500).json({ error: req.__('role.assign_permissions_error') });
         }
     }
 }

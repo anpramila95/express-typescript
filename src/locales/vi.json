@@ -1,7 +1,240 @@
 {
 	"Welcome": "Chào mừng",
-	"A Web & API server built using TypeScript": "Một máy chủ Web & API được xây dựng bằng TypeScript",
+	"A Web & API server built using TypeScript": "Máy chủ Web & API được xây dựng bằng TypeScript",
 	"account_info": {
-		"success": "account_info.success"
+		"success": "Lấy thông tin tài khoản thành công"
+	},
+	"validation": {
+		"email_blank": "E-mail không được để trống",
+		"email_invalid": "E-mail không hợp lệ",
+		"password_blank": "Mật khẩu không được để trống",
+		"password_min_length": "Mật khẩu phải có ít nhất 8 ký tự",
+		"confirm_password_blank": "Xác nhận mật khẩu không được để trống",
+		"password_mismatch": "Mật khẩu và xác nhận mật khẩu không khớp"
+	},
+	"auth": {
+		"login_success": "Bạn đã đăng nhập thành công!",
+		"register_success": "Bạn đã đăng ký thành công!",
+		"account_exists": "Tài khoản với địa chỉ e-mail này đã tồn tại.",
+		"account_or_password_incorrect": "Tài khoản hoặc mật khẩu không chính xác.",
+		"social_login_required": "Vui lòng đăng nhập bằng tài khoản mạng xã hội của bạn.",
+		"account_blocked": "Tài khoản của bạn đã bị khóa trên trang web này.",
+		"account_blocked_with_reason": "Tài khoản của bạn đã bị khóa trên trang web này. Lý do: {{reason}}",
+		"2fa_required": "Vui lòng cung cấp mã 2FA của bạn.",
+		"2fa_invalid_temp_token": "Token tạm thời và mã 2FA là bắt buộc.",
+		"2fa_invalid_token": "Token tạm thời không hợp lệ.",
+		"2fa_not_enabled": "2FA chưa được kích hoạt cho người dùng này.",
+		"2fa_invalid_code": "Mã 2FA không hợp lệ.",
+		"2fa_expired_token": "Token tạm thời không hợp lệ hoặc đã hết hạn.",
+		"2fa_setup_success": "2FA đã được kích hoạt thành công.",
+		"2fa_disabled_success": "2FA đã được vô hiệu hóa.",
+		"2fa_scan_qr": "Quét mã QR này bằng ứng dụng xác thực của bạn.",
+		"2fa_secret_not_found": "Không tìm thấy secret 2FA. Vui lòng thiết lập trước.",
+		"password_required": "Vui lòng nhập mật khẩu của bạn.",
+		"password_incorrect": "Mật khẩu không chính xác."
+	},
+	"user": {
+		"not_found": "Không tìm thấy thông tin người dùng.",
+		"email_already_used": "Địa chỉ email này đã được sử dụng.",
+		"no_fields_to_update": "Không có trường nào để cập nhật.",
+		"user_not_found_by_id": "Không tìm thấy người dùng với ID {{id}}.",
+		"cannot_get_permissions": "Không thể lấy quyền của người dùng."
+	},
+	"notification": {
+		"list_success": "Lấy danh sách thông báo thành công",
+		"mark_read_success": "Đã cập nhật thông báo.",
+		"mark_all_read_success": "Đã cập nhật {{count}} thông báo.",
+		"not_found_or_no_permission": "Không tìm thấy thông báo hoặc bạn không có quyền.",
+		"error_occurred": "Đã có lỗi xảy ra, vui lòng thử lại."
+	},
+	"credit": {
+		"select_package": "Vui lòng chọn một gói credit.",
+		"site_not_found": "Không tìm thấy thông tin site.",
+		"package_not_found": "Gói credit không tồn tại.",
+		"request_sent": "Yêu cầu mua credit đã được gửi và đang chờ xét duyệt."
+	},
+	"general": {
+		"server_error": "Đã xảy ra lỗi máy chủ.",
+		"error_occurred": "Đã có lỗi xảy ra, vui lòng thử lại sau."
+	},
+	"titles": {
+		"login": "Đăng nhập",
+		"signup": "Đăng ký"
+	},
+	"subscription": {
+		"free_plan": "Gói Miễn Phí",
+		"default_description": "Bạn đang ở gói mặc định."
+	},
+	"affiliate": {
+		"server_error": "Lỗi máy chủ.",
+		"provide_amount_payment": "Vui lòng cung cấp số tiền và thông tin thanh toán.",
+		"amount_exceeds_balance": "Số tiền yêu cầu vượt quá số dư hiện có.",
+		"withdrawal_request_sent": "Yêu cầu rút tiền của bạn đã được gửi và đang chờ xử lý.",
+		"withdrawal_history_error": "Lỗi khi lấy lịch sử rút tiền của người dùng.",
+		"downline_details_error": "Lỗi khi lấy chi tiết downline F1."
+	},
+	"api_key": {
+		"list_success": "Danh sách API keys đã được lấy thành công.",
+		"server_error": "Lỗi máy chủ.",
+		"limit_reached": "Bạn đã đạt giới hạn tối đa 5 API keys. Vui lòng thu hồi một key trước khi tạo key mới.",
+		"created_success": "API Key đã được tạo thành công. Vui lòng sao chép và lưu lại ở nơi an toàn, bạn sẽ không thể xem lại nó.",
+		"revoked_success": "Đã thu hồi API key thành công.",
+		"not_found_or_no_permission": "Không tìm thấy API key hoặc bạn không có quyền thu hồi nó."
+	},
+	"media": {
+		"list_success": "Danh sách media đã được lấy thành công.",
+		"server_error": "Lỗi máy chủ khi lấy dữ liệu media.",
+		"no_file_uploaded": "Không có file nào được tải lên.",
+		"upload_success": "Tải file lên thành công",
+		"cannot_save_media": "Không thể lưu thông tin media.",
+		"provide_video_url": "Vui lòng cung cấp videoUrl.",
+		"video_imported_success": "Video đã được nhập thành công.",
+		"cannot_import_video": "Không thể nhập video từ URL được cung cấp.",
+		"import_video_error": "Lỗi trong quá trình nhập video.",
+		"type_required": "Trường \"type\" là bắt buộc.",
+		"insufficient_credits": "Bạn không đủ credit để thực hiện hành động này.",
+		"concurrent_jobs_limit": "Bạn đã đạt đến giới hạn {limit} job chạy đồng thời. Vui lòng chờ cho các job hiện tại hoàn thành.",
+		"request_accepted": "Yêu cầu của bạn đã được tiếp nhận và đang được xử lý.",
+		"ai_request_error": "Lỗi khi tạo yêu cầu AI.",
+		"invalid_media_id": "ID media không hợp lệ.",
+		"no_permission_delete": "Bạn không có quyền xóa mục media này.",
+		"delete_success": "Đã xóa media thành công.",
+		"cannot_delete_media": "Không thể xóa media.",
+		"cannot_get_folder_data": "Không thể lấy dữ liệu thư mục.",
+		"folder_name_required": "Tên thư mục là bắt buộc.",
+		"create_folder_success": "Tạo thư mục thành công.",
+		"cannot_create_folder": "Không thể tạo thư mục.",
+		"items_array_required": "Trường \"items\" phải là một mảng và không được rỗng.",
+		"move_items_success": "Di chuyển các mục đã chọn thành công.",
+		"move_items_error": "Đã có lỗi xảy ra trong quá trình di chuyển."
+	},
+	"payment": {
+		"provide_transaction_info": "Vui lòng cung cấp đủ thông tin giao dịch và phương thức thanh toán.",
+		"invalid_transaction": "Giao dịch không hợp lệ.",
+		"paypal_success": "Thanh toán thành công qua PayPal"
+	},
+	"plan": {
+		"cannot_load_plans": "Không thể tải danh sách gói dịch vụ.",
+		"select_pricing_plan": "Vui lòng chọn một gói giá.",
+		"site_not_found": "Không tìm thấy thông tin site.",
+		"invalid_pricing_plan": "Gói giá không hợp lệ.",
+		"invalid_discount_code": "Mã giảm giá không hợp lệ hoặc đã hết hạn.",
+		"upgrade_request_sent": "Yêu cầu nâng cấp của bạn đã được gửi thành công.",
+		"processing_error": "Đã xảy ra lỗi trong quá trình xử lý."
+	},
+	"profile": {
+		"update_success": "Cập nhật hồ sơ thành công",
+		"update_error": "Lỗi máy chủ khi cập nhật hồ sơ"
+	},
+	"transaction": {
+		"not_found": "Không tìm thấy giao dịch.",
+		"no_permission": "Bạn không có quyền xem giao dịch này.",
+		"details": "Chi tiết giao dịch",
+		"login_required": "Bạn cần đăng nhập để xem giao dịch.",
+		"list_error": "Lỗi khi lấy danh sách giao dịch."
+	},
+	"webhook": {
+		"stripe_success": "Thanh toán thành công qua Stripe",
+		"coinbase_success": "Thanh toán thành công qua Coinbase",
+		"paypal_success": "Thanh toán thành công qua PayPal Webhook",
+		"processed_successfully": "Webhook đã được xử lý thành công.",
+		"verify_error": "Lỗi Webhook: Không thể xác minh payload"
+	},
+	"admin": {
+		"invalid_transaction": "Giao dịch không hợp lệ hoặc đã được xử lý.",
+		"cannot_self_approve": "Bạn không thể tự duyệt giao dịch cho chính mình.",
+		"user_not_in_site": "Người dùng không thuộc về site này.",
+		"missing_pricing_id": "Giao dịch subscription không có pricing_id trong meta.",
+		"approved_by_admin": "Đã duyệt bởi admin",
+		"transaction_approved": "Giao dịch đã được duyệt thành công.",
+		"transaction_approved_title": "Giao dịch của bạn đã được duyệt",
+		"transaction_approved_message": "Giao dịch #{transactionId} đã được chấp thuận.",
+		"processing_error": "Đã xảy ra lỗi trong quá trình xử lý: {error}",
+		"provide_rejection_reason": "Vui lòng cung cấp lý do từ chối.",
+		"cannot_self_process": "Bạn không thể tự xử lý giao dịch cho chính mình.",
+		"transaction_rejected": "Giao dịch đã bị từ chối.",
+		"transaction_rejected_title": "Giao dịch của bạn bị từ chối",
+		"transaction_rejected_message": "Rất tiếc, giao dịch #{transactionId} đã bị từ chối. Lý do: {reason}",
+		"provide_user_pricing": "Cần cung cấp userId và pricingPlanId.",
+		"cannot_self_assign": "Bạn không thể tự gán gói cho chính mình.",
+		"user_not_found": "Không tìm thấy người dùng.",
+		"pricing_plan_not_found": "Không tìm thấy gói giá (pricing plan).",
+		"subscription_plan_not_found": "Không tìm thấy gói dịch vụ tương ứng.",
+		"plan_not_in_site": "Gói dịch vụ không thuộc về site này.",
+		"plan_assigned_success": "Đã gán thành công gói \"{planName}\" cho người dùng.",
+		"system_error": "Đã xảy ra lỗi hệ thống: {error}",
+		"provide_user_amount": "Cần cung cấp userId và amount.",
+		"cannot_self_credit": "Bạn không thể tự cộng credit cho chính mình.",
+		"credits_added_success": "Đã cộng thành công {amount} credit ({type}) cho người dùng.",
+		"system_error_simple": "Đã xảy ra lỗi hệ thống.",
+		"provide_user_package": "Cần cung cấp userId và packageId.",
+		"package_added_success": "Đã cộng thành công gói {packageId} cho người dùng.",
+		"package_add_error": "Lỗi khi admin cộng gói cho người dùng.",
+		"server_error": "Lỗi máy chủ.",
+		"withdrawal_not_found": "Không tìm thấy yêu cầu rút tiền.",
+		"invalid_status": "Trạng thái không hợp lệ.",
+		"provide_rejection_reason_withdrawal": "Vui lòng cung cấp lý do từ chối.",
+		"withdrawal_processed": "Đã xử lý yêu cầu rút tiền thành công với trạng thái: {status}.",
+		"withdrawal_not_found_or_processed": "Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý."
+	},
+	"permission": {
+		"name_required": "Tên quyền là bắt buộc.",
+		"create_success": "Tạo quyền thành công.",
+		"create_error": "Lỗi khi tạo quyền."
+	},
+	"role": {
+		"name_required": "Tên vai trò là bắt buộc.",
+		"create_success": "Tạo vai trò thành công",
+		"permission_ids_required": "permissionIds phải là một mảng và không được rỗng.",
+		"role_not_found": "Không tìm thấy vai trò này.",
+		"no_permission_edit": "Bạn không có quyền chỉnh sửa vai trò này.",
+		"assign_permissions_success": "Gán quyền cho vai trò thành công.",
+		"assign_permissions_error": "Đã có lỗi xảy ra, vui lòng thử lại."
+	},
+	"site_admin": {
+		"no_access": "Bạn không có quyền truy cập vào chức năng này.",
+		"system_error": "Đã xảy ra lỗi hệ thống.",
+		"provide_user_id_block": "Vui lòng cung cấp ID người dùng cần khóa.",
+		"cannot_block_self": "Bạn không thể tự khóa chính mình.",
+		"user_blocked_success": "Đã khóa thành công người dùng ID {userId}.",
+		"provide_user_id_unblock": "Vui lòng cung cấp ID người dùng cần mở khóa.",
+		"no_permission_change_password": "Bạn không có quyền thay đổi mật khẩu của người dùng này.",
+		"user_unblocked_success": "Đã mở khóa thành công cho người dùng ID {userId}.",
+		"user_not_blocked": "Người dùng này không bị khóa hoặc đã được mở khóa trước đó.",
+		"provide_user_password": "Cần cung cấp userId và mật khẩu mới.",
+		"user_not_found": "Không tìm thấy người dùng.",
+		"password_updated_success": "Mật khẩu đã được cập nhật thành công.",
+		"plan_name_jobs_required": "Tên gói (name) và giới hạn công việc (max_concurrent_jobs) là bắt buộc.",
+		"server_error_create_plan": "Lỗi máy chủ khi tạo gói dịch vụ.",
+		"plan_fields_required": "plan_id, name, price, và duration_days là bắt buộc.",
+		"subscription_plan_not_found": "Không tìm thấy gói dịch vụ với ID: {planId} trong site này.",
+		"server_error_create_pricing": "Lỗi máy chủ khi tạo gói giá.",
+		"discount_fields_required": "code, discount_type, và discount_value là bắt buộc.",
+		"invalid_discount_type": "discount_type phải là \"percentage\" hoặc \"fixed_amount\".",
+		"discount_code_exists": "Mã \"{code}\" đã tồn tại.",
+		"server_error_create_discount": "Lỗi máy chủ khi tạo mã giảm giá."
+	},
+	"user_management": {
+		"role_id_required": "Mã vai trò (roleId) là bắt buộc.",
+		"user_not_found": "Không tìm thấy người dùng này.",
+		"role_not_found": "Không tìm thấy vai trò này.",
+		"no_permission_user": "Bạn không có quyền thao tác trên người dùng này.",
+		"no_permission_role": "Bạn không có quyền sử dụng vai trò này.",
+		"assign_role_success": "Gán vai trò cho người dùng thành công.",
+		"assign_role_error": "Đã có lỗi xảy ra, vui lòng thử lại.",
+		"user_info_required": "Vui lòng cung cấp đầy đủ thông tin: họ tên, email, mật khẩu và vai trò.",
+		"invalid_role": "Vai trò không hợp lệ hoặc không thuộc thẩm quyền của bạn.",
+		"create_user_success": "Tạo người dùng thành công."
+	},
+	"super_admin": {
+		"feature_codes_array": "`featureCodes` phải là một mảng.",
+		"update_features_success": "Cập nhật tính năng cho site thành công.",
+		"server_error": "Đã có lỗi xảy ra ở máy chủ.",
+		"function_needs_implementation": "Chức năng này cần được cài đặt trong model Site"
+	},
+	"transaction": {
+		"upgrade_request": "Yêu cầu nâng cấp gói: {planName}",
+		"purchase_request": "Yêu cầu mua gói: {credits} credits",
+		"purchase_package_request": "Yêu cầu mua gói: {packageName}"
 	}
 }

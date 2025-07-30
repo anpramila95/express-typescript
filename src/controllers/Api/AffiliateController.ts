@@ -38,7 +38,7 @@ class AffiliateController {
 
         } catch (error) {
             Log.error(`Lỗi khi lấy lịch sử hoa hồng: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('affiliate.server_error') });
         }
     }
 
@@ -57,7 +57,7 @@ class AffiliateController {
             return res.json({ totalEarnings, totalWithdrawn, availableBalance });
         } catch (error) {
             Log.error(`Lỗi khi lấy summary affiliate: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('affiliate.server_error') });
         }
     }
 
@@ -69,7 +69,7 @@ class AffiliateController {
         const { amount, paymentDetails } = req.body;
 
         if (!amount || amount <= 0 || !paymentDetails) {
-            return res.status(400).json({ error: 'Vui lòng cung cấp số tiền và thông tin thanh toán.' });
+            return res.status(400).json({ error: req.__('affiliate.provide_amount_payment') });
         }
 
         try {
@@ -80,14 +80,14 @@ class AffiliateController {
             const availableBalance = totalEarnings - totalWithdrawn;
 
             if (amount > availableBalance) {
-                return res.status(400).json({ error: 'Số tiền yêu cầu vượt quá số dư hiện có.' });
+                return res.status(400).json({ error: req.__('affiliate.amount_exceeds_balance') });
             }
 
             await WithdrawalRequest.create({ userId: user.id, amount, paymentDetails });
-            return res.status(201).json({ message: 'Yêu cầu rút tiền của bạn đã được gửi và đang chờ xử lý.' });
+            return res.status(201).json({ message: req.__('affiliate.withdrawal_request_sent') });
         } catch (error) {
             Log.error(`Lỗi khi tạo yêu cầu rút tiền: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('affiliate.server_error') });
         }
     }
 
@@ -119,7 +119,7 @@ class AffiliateController {
             });
         } catch (error) {
             Log.error(`Lỗi khi lấy lịch sử rút tiền của người dùng: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('affiliate.server_error') });
         }
     }
     
@@ -154,7 +154,7 @@ class AffiliateController {
 
         } catch (error) {
             Log.error(`Lỗi khi lấy chi tiết downline F1: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('affiliate.server_error') });
         }
     }
 }

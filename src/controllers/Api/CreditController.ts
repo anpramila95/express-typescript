@@ -23,23 +23,23 @@ class CreditController {
         const { packageId } = req.body;
 
         if (!packageId) {
-            return res.status(400).json({ error: 'Vui lòng chọn một gói credit.' });
+            return res.status(400).json({ error: req.__('credit.select_package') });
         }
 
         const site = req.site as ISite;
         if (!site) {
-            return res.status(400).json({ error: 'Không tìm thấy thông tin site.' });
+            return res.status(400).json({ error: req.__('credit.site_not_found') });
         }
 
 
         const creditPackage = await CreditPackage.findById(packageId, site.id);
         if (!creditPackage) {
-            return res.status(404).json({ error: 'Gói credit không tồn tại.' });
+            return res.status(404).json({ error: req.__('credit.package_not_found') });
         }
 
         await Transaction.createCreditRequest(user.id, site.id, creditPackage); // <-- Thay đổi
 
-        return res.status(201).json({ message: 'Yêu cầu mua credit đã được gửi và đang chờ xét duyệt.' });
+        return res.status(201).json({ message: req.__('credit.request_sent') });
     }
 }
 

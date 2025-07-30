@@ -59,7 +59,7 @@ class MediaController {
             });
 
             return res.json({
-                message: 'Danh sách media đã được lấy thành công.',
+                message: req.__('media.list_success'),
                 success: true,
                 items: processedItems,
                 pager: {
@@ -71,7 +71,7 @@ class MediaController {
             });
         } catch (error) {
             Log.error(`[MediaController] ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ khi lấy dữ liệu media.' });
+            return res.status(500).json({ error: req.__('media.server_error') });
         }
     }
 
@@ -83,7 +83,7 @@ class MediaController {
         const user = req.user as unknown as AuthenticatedUser;
 
         if (!req.file) {
-            return res.status(400).json({ error: 'Không có file nào được tải lên.' });
+            return res.status(400).json({ error: req.__('media.no_file_uploaded') });
         }
 
         const file = req.file;
@@ -106,13 +106,13 @@ class MediaController {
             const newMedia = await Media.findById(mediaId);
 
             return res.status(201).json({
-                message: 'Tải file lên thành công',
+                message: req.__('media.upload_success'),
                 success: true,
                 data: newMedia,
             });
         } catch (error) {
             Log.error(`[MediaController] ${error.stack}`);
-            return res.status(500).json({ error: 'Không thể lưu thông tin media.' });
+            return res.status(500).json({ error: req.__('media.cannot_save_media') });
         }
     }
 
@@ -125,7 +125,7 @@ class MediaController {
         const { videoUrl } = req.body;
 
         if (!videoUrl) {
-            return res.status(400).json({ error: 'Vui lòng cung cấp videoUrl.' });
+            return res.status(400).json({ error: req.__('media.provide_video_url') });
         }
 
         
@@ -149,16 +149,16 @@ class MediaController {
                 const mediaId = await Media.create(mediaData);
                 const newMedia = await Media.findById(mediaId);
                 return res.status(201).json({
-                    message: 'Video đã được nhập thành công.',
+                    message: req.__('media.video_imported_success'),
                     success: true,
                     data: newMedia
                 });
             } else {
-                return res.status(400).json({ error: 'Không thể nhập video từ URL được cung cấp.' });
+                return res.status(400).json({ error: req.__('media.cannot_import_video') });
             }
         } catch (error) {
             Log.error(`[MediaController] ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi trong quá trình nhập video.' });
+            return res.status(500).json({ error: req.__('media.import_video_error') });
         }
     }
 
@@ -171,7 +171,7 @@ class MediaController {
         const { type, prompt, options } = req.body;
 
         if (!type) {
-            return res.status(400).json({ error: 'Trường "type" là bắt buộc.' });
+            return res.status(400).json({ error: req.__('media.type_required') });
         }
 
         try {
@@ -180,7 +180,7 @@ class MediaController {
             const hasEnough = await UserCredit.hasEnough(user.id, requiredCredits);
 
             if (!hasEnough) {
-                return res.status(402).json({ error: 'Bạn không đủ credit để thực hiện hành động này.' });
+                return res.status(402).json({ error: req.__('media.insufficient_credits') });
             }
             const planLimits = await SubscriptionService.getPlanLimitsForUser(user.id);
 
@@ -190,7 +190,7 @@ class MediaController {
             // 3. So sánh và trả về lỗi nếu vượt quá giới hạn
             if (activeJobs >= planLimits.maxConcurrentJobs) {
                 return res.status(429).json({ // 429 Too Many Requests
-                    error: `Bạn đã đạt đến giới hạn ${planLimits.maxConcurrentJobs} job chạy đồng thời. Vui lòng chờ cho các job hiện tại hoàn thành.`
+                    error: req.__('media.concurrent_jobs_limit', { limit: planLimits.maxConcurrentJobs.toString() })
                 });
             }
 
@@ -213,14 +213,14 @@ class MediaController {
 
             const createdMedia = await Media.findById(mediaId);
             return res.status(202).json({
-                message: 'Yêu cầu của bạn đã được tiếp nhận và đang được xử lý.',
+                message: req.__('media.request_accepted'),
                 success: true,
                 data: createdMedia
             });
 
         } catch (error) {
             Log.error(`[MediaController] ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi khi tạo yêu cầu AI.' });
+            return res.status(500).json({ error: req.__('media.ai_request_error') });
         }
     }
 
@@ -234,21 +234,21 @@ class MediaController {
         const mediaId = parseInt(id, 10);
 
         if (isNaN(mediaId)) {
-            return res.status(400).json({ error: 'ID media không hợp lệ.' });
+            return res.status(400).json({ error: req.__('media.invalid_media_id') });
         }
 
         try {
             const isOwner = await Media.isOwner(mediaId, user.id);
             if (!isOwner) {
-                return res.status(403).json({ error: 'Bạn không có quyền xóa mục media này.' });
+                return res.status(403).json({ error: req.__('media.no_permission_delete') });
             }
 
             await Media.delete(mediaId);
-            return res.status(200).json({ message: 'Đã xóa media thành công.' });
+            return res.status(200).json({ message: req.__('media.delete_success') });
 
         } catch (error) {
             Log.error(`[MediaController] ${error.stack}`);
-            return res.status(500).json({ error: 'Không thể xóa media.' });
+            return res.status(500).json({ error: req.__('media.cannot_delete_media') });
         }
     }
 
@@ -263,7 +263,7 @@ class MediaController {
             const contents = await Folder.getContents(user.id, folderId);
             return res.json(contents);
         } catch (error) {
-            return res.status(500).json({ error: 'Không thể lấy dữ liệu thư mục.' });
+            return res.status(500).json({ error: req.__('media.cannot_get_folder_data') });
         }
     }
 
@@ -275,14 +275,14 @@ class MediaController {
         const { name, parentId = null } = req.body;
 
         if (!name) {
-            return res.status(400).json({ error: 'Tên thư mục là bắt buộc.' });
+            return res.status(400).json({ error: req.__('media.folder_name_required') });
         }
 
         try {
             const newFolder = await Folder.create(user.id, parentId, name);
-            return res.status(201).json({ message: 'Tạo thư mục thành công.', ...newFolder });
+            return res.status(201).json({ message: req.__('media.create_folder_success'), ...newFolder });
         } catch (error) {
-            return res.status(500).json({ error: 'Không thể tạo thư mục.' });
+            return res.status(500).json({ error: req.__('media.cannot_create_folder') });
         }
     }
 
@@ -294,7 +294,7 @@ class MediaController {
         const { items, newParentId = null } = req.body;
 
         if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({ error: 'Trường "items" phải là một mảng và không được rỗng.' });
+            return res.status(400).json({ error: req.__('media.items_array_required') });
         }
 
         const folderIdsToMove: number[] = items
@@ -317,10 +317,10 @@ class MediaController {
             }
             
             await connection.commit();
-            return res.json({ message: 'Di chuyển các mục đã chọn thành công.' });
+            return res.json({ message: req.__('media.move_items_success') });
         } catch (error) {
             await connection.rollback();
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra trong quá trình di chuyển.' });
+            return res.status(500).json({ error: req.__('media.move_items_error') });
         } finally {
             connection.release();
         }

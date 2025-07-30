@@ -20,7 +20,7 @@ class PlanController {
             const plans = await SubscriptionPlan.findAllWithPricing();
             return res.status(200).json(plans);
         } catch (error) {
-            return res.status(500).json({ error: 'Không thể tải danh sách gói dịch vụ.' });
+            return res.status(500).json({ error: req.__('plan.cannot_load_plans') });
         }
     }
 
@@ -30,19 +30,19 @@ class PlanController {
         const { pricingId, redeemCode } = req.body;
         
         if (!pricingId) {
-            return res.status(400).json({ error: 'Vui lòng chọn một gói giá.' });
+            return res.status(400).json({ error: req.__('plan.select_pricing_plan') });
         }
 
         const site = req.site as ISite;
         if (!site) {
-            return res.status(400).json({ error: 'Không tìm thấy thông tin site.' });
+            return res.status(400).json({ error: req.__('plan.site_not_found') });
         }
 
         try {
             const pricingPlan = await PricingPlan.findByIdSiteId(Number(pricingId), site.id);
 
             if (!pricingPlan) {
-                return res.status(404).json({ error: 'Gói giá không hợp lệ.' });
+                return res.status(404).json({ error: req.__('plan.invalid_pricing_plan') });
             }
 
             let discountInfo: { code: IDiscountCode; finalAmount: number } | undefined;
@@ -51,7 +51,7 @@ class PlanController {
             if (redeemCode) {
                 const discountCode = await DiscountCode.findValidCode(redeemCode, site.id);
                 if (!discountCode) {
-                    return res.status(400).json({ error: 'Mã giảm giá không hợp lệ hoặc đã hết hạn.' });
+                    return res.status(400).json({ error: req.__('plan.invalid_discount_code') });
                 }
 
                 const finalAmount = DiscountCode.calculateDiscountedAmount(pricingPlan.price, discountCode);
@@ -61,10 +61,10 @@ class PlanController {
             // Tạo yêu cầu giao dịch, truyền thông tin giảm giá vào (nếu có)
             await Transaction.createSubscriptionRequest(user.id, site.id,  pricingPlan, discountInfo);
 
-            return res.status(201).json({ message: 'Yêu cầu nâng cấp của bạn đã được gửi thành công.' });
+            return res.status(201).json({ message: req.__('plan.upgrade_request_sent') });
         } catch (error) {
             Log.error(`Lỗi khi yêu cầu nâng cấp: ${error.stack}`);
-            return res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý.' });
+            return res.status(500).json({ error: req.__('plan.processing_error') });
         }
     }
 }

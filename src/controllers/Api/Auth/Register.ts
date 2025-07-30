@@ -15,12 +15,12 @@ import { events } from '../../../events/definitions';
 
 class Register {
 	public static async perform (req: Request, res: Response): Promise<any> {
-		req.assert('email', 'E-mail cannot be blank').notEmpty();
-		req.assert('email', 'E-mail is not valid').isEmail();
-		req.assert('password', 'Password cannot be blank').notEmpty();
-		req.assert('password', 'Password length must be at least 8 characters').isLength({ min: 8 });
-		req.assert('confirmPassword', 'Confirmation Password cannot be blank').notEmpty();
-		req.assert('confirmPassword', 'Password & Confirmation password does not match').equals(req.body.password);
+		req.assert('email', req.__('validation.email_blank')).notEmpty();
+		req.assert('email', req.__('validation.email_invalid')).isEmail();
+		req.assert('password', req.__('validation.password_blank')).notEmpty();
+		req.assert('password', req.__('validation.password_min_length')).isLength({ min: 8 });
+		req.assert('confirmPassword', req.__('validation.confirm_password_blank')).notEmpty();
+		req.assert('confirmPassword', req.__('validation.password_mismatch')).equals(req.body.password);
 		req.sanitize('email').normalizeEmail({ gmail_remove_dots: true });
 
 		const site = (req as any).site as ISite;
@@ -30,7 +30,7 @@ class Register {
 			const existingUser = await User.findOne({ email, site_id: site.id });
 			if (existingUser) {
 				return res.status(409).json({
-					error: 'Account with this e-mail address already exists.'
+					error: req.__('auth.account_exists')
 				});
 			}
 
@@ -56,7 +56,7 @@ class Register {
 			Event.emit(events.user.created, { user }); //su kien
 
 			return res.json({
-				message: 'You have been successfully registered!'
+				message: req.__('auth.register_success')
 			});
 
 		} catch (err) {

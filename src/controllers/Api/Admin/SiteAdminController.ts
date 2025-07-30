@@ -66,7 +66,7 @@ class SiteAdminController {
             });
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách người dùng: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
 
@@ -83,7 +83,7 @@ class SiteAdminController {
         if (!userIdToBlock) {
             return res
                 .status(400)
-                .json({ error: "Vui lòng cung cấp ID người dùng cần khóa." });
+                .json({ error: req.__('site_admin.provide_user_id_block') });
         }
 
         try {
@@ -95,7 +95,7 @@ class SiteAdminController {
                 return res
                     .status(403)
                     .json({
-                        error: "Bạn không thể tự khóa chính mình.",
+                        error: req.__('site_admin.cannot_block_self'),
                     });
             }
 
@@ -107,11 +107,11 @@ class SiteAdminController {
             });
 
             return res.json({
-                message: `Đã khóa thành công người dùng ID ${userIdToBlock}.`,
+                message: req.__('site_admin.user_blocked_success', { userId: userIdToBlock }),
             });
         } catch (error) {
             Log.error(`Lỗi khi admin khóa người dùng: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
 
@@ -128,7 +128,7 @@ class SiteAdminController {
         if (!userIdToUnblock) {
             return res
                 .status(400)
-                .json({ error: "Vui lòng cung cấp ID người dùng cần mở khóa." });
+                .json({ error: req.__('site_admin.provide_user_id_unblock') });
         }
 
         try {
@@ -140,23 +140,23 @@ class SiteAdminController {
                 return res
                     .status(403)
                     .json({
-                        error: "Bạn không có quyền thay đổi mật khẩu của người dùng này.",
+                        error: req.__('site_admin.no_permission_change_password'),
                     });
             }
 
             const success = await BlockedUser.unblock(site.id, userIdToUnblock);
             if (success) {
                 return res.json({
-                    message: `Đã mở khóa thành công cho người dùng ID ${userIdToUnblock}.`,
+                    message: req.__('site_admin.user_unblocked_success', { userId: userIdToUnblock }),
                 });
             } else {
                 return res.status(404).json({
-                    error: "Người dùng này không bị khóa hoặc đã được mở khóa trước đó.",
+                    error: req.__('site_admin.user_not_blocked'),
                 });
             }
         } catch (error) {
             Log.error(`Lỗi khi admin mở khóa người dùng: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
 
@@ -171,7 +171,7 @@ class SiteAdminController {
         if (!userId || !newPassword) {
             return res
                 .status(400)
-                .json({ error: "Cần cung cấp userId và mật khẩu mới." });
+                .json({ error: req.__('site_admin.provide_user_password') });
         }
 
         // Lấy thông tin site từ domain để có siteId
@@ -181,7 +181,7 @@ class SiteAdminController {
             // Kiểm tra xem người dùng có tồn tại không
             const user = await User.findById(userId, site.id);
             if (!user) {
-                return res.status(404).json({ error: "Không tìm thấy người dùng." });
+                return res.status(404).json({ error: req.__('site_admin.user_not_found') });
             }
 
             // Chỉ admin mới có quyền thay đổi mật khẩu của người dùng khác
@@ -189,16 +189,16 @@ class SiteAdminController {
                 return res
                     .status(403)
                     .json({
-                        error: "Bạn không có quyền thay đổi mật khẩu của người dùng này.",
+                        error: req.__('site_admin.no_permission_change_password'),
                     });
             }
 
             // Cập nhật mật khẩu
             await User.changePassword(newPassword, userId);
-            return res.json({ message: "Mật khẩu đã được cập nhật thành công." });
+            return res.json({ message: req.__('site_admin.password_updated_success') });
         } catch (error) {
             Log.error(`Lỗi khi admin thay đổi mật khẩu người dùng: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
 
@@ -216,7 +216,7 @@ class SiteAdminController {
             const hasAccess = await SiteUtils.hasAdminAccess(req, admin.id, admin.isAdmin);
 
             if (!hasAccess) {
-                return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+                return res.status(403).json({ error: req.__('site_admin.no_access') });
             }
 
             // Log action với site context
@@ -229,7 +229,7 @@ class SiteAdminController {
             return res.json(plans);
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách gói dịch vụ: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
 
@@ -250,7 +250,7 @@ class SiteAdminController {
             return res.json(pricingPlans);
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách gói giá: ${error.stack}`);
-            return res.status(500).json({ error: "Đã xảy ra lỗi hệ thống." });
+            return res.status(500).json({ error: req.__('site_admin.system_error') });
         }
     }
     /**
@@ -263,11 +263,11 @@ class SiteAdminController {
 
         // Kiểm tra quyền
         if(!admin.isAdmin || admin.id != site.user_id) {
-            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+            return res.status(403).json({ error: req.__('site_admin.no_access') });
         }
 
         if (!name || max_concurrent_jobs === undefined) {
-            return res.status(400).json({ error: 'Tên gói (name) và giới hạn công việc (max_concurrent_jobs) là bắt buộc.' });
+            return res.status(400).json({ error: req.__('site_admin.plan_name_jobs_required') });
         }
 
         try {
@@ -281,7 +281,7 @@ class SiteAdminController {
             return res.status(201).json(newPlan);
         } catch (error) {
             Log.error(`Lỗi khi admin tạo Subscription Plan: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ khi tạo gói dịch vụ.' });
+            return res.status(500).json({ error: req.__('site_admin.server_error_create_plan') });
         }
     }
 
@@ -295,18 +295,18 @@ class SiteAdminController {
 
         // Kiểm tra quyền
         if(!admin.isAdmin || admin.id != site.user_id) {
-            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+            return res.status(403).json({ error: req.__('site_admin.no_access') });
         }
 
         if (!plan_id || !name || price === undefined || !duration_days) {
-            return res.status(400).json({ error: 'plan_id, name, price, và duration_days là bắt buộc.' });
+            return res.status(400).json({ error: req.__('site_admin.plan_fields_required') });
         }
 
         try {
             // Kiểm tra xem plan_id có tồn tại và thuộc về site này không
             const subscriptionPlan = await SubscriptionPlan.findByIdAndSite(plan_id, site.id);
             if (!subscriptionPlan) {
-                return res.status(404).json({ error: `Không tìm thấy gói dịch vụ với ID: ${plan_id} trong site này.` });
+                return res.status(404).json({ error: req.__('site_admin.subscription_plan_not_found', { planId: plan_id }) });
             }
 
             const newPricingPlan = await PricingPlan.create({
@@ -323,7 +323,7 @@ class SiteAdminController {
             return res.status(201).json(newPricingPlan);
         } catch (error) {
             Log.error(`Lỗi khi admin tạo Pricing Plan: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ khi tạo gói giá.' });
+            return res.status(500).json({ error: req.__('site_admin.server_error_create_pricing') });
         }
     }
 
@@ -334,14 +334,14 @@ class SiteAdminController {
 
         // Kiểm tra quyền
         if(!admin.isAdmin || admin.id != site.user_id) {
-            return res.status(403).json({ error: "Bạn không có quyền truy cập vào chức năng này." });
+            return res.status(403).json({ error: req.__('site_admin.no_access') });
         }
 
         if (!code || !discount_type || discount_value === undefined) {
-            return res.status(400).json({ error: 'code, discount_type, và discount_value là bắt buộc.' });
+            return res.status(400).json({ error: req.__('site_admin.discount_fields_required') });
         }
         if (!['percentage', 'fixed_amount'].includes(discount_type)) {
-            return res.status(400).json({ error: 'discount_type phải là "percentage" hoặc "fixed_amount".' });
+            return res.status(400).json({ error: req.__('site_admin.invalid_discount_type') });
         }
 
         try {
@@ -358,10 +358,10 @@ class SiteAdminController {
         } catch (error) {
             // Xử lý lỗi trùng lặp mã
             if (error.code === 'ER_DUP_ENTRY') {
-                return res.status(409).json({ error: `Mã "${code}" đã tồn tại.` });
+                return res.status(409).json({ error: req.__('site_admin.discount_code_exists', { code }) });
             }
             Log.error(`Lỗi khi admin tạo mã giảm giá: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ khi tạo mã giảm giá.' });
+            return res.status(500).json({ error: req.__('site_admin.server_error_create_discount') });
         }
     }
 }

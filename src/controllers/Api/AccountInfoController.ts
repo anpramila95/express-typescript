@@ -39,7 +39,7 @@ class AccountInfoController {
             ]);
 
             if (!userDetails) {
-                return res.status(404).json({ error: 'Không tìm thấy thông tin người dùng.' });
+                return res.status(404).json({ error: req.__('user.not_found') });
             }
 
             // Xóa các thông tin nhạy cảm trước khi trả về
@@ -62,8 +62,8 @@ class AccountInfoController {
                     balance: creditDetails ? creditDetails : 0
                 },
                 subscription: subscriptionPlan || {
-                    name: "Gói Miễn Phí",
-                    description: "Bạn đang ở gói mặc định."
+                    name: req.__('subscription.free_plan'),
+                    description: req.__('subscription.default_description')
                     // Bạn có thể lấy thông tin gói free mặc định từ DB để hiển thị ở đây
                 },
                 message: req.__('account_info.success')
@@ -75,7 +75,7 @@ class AccountInfoController {
 
         } catch (error) {
             Log.error(`[AccountInfoController] Lỗi khi lấy thông tin tài khoản cho user ID ${authUser.id}: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ khi lấy thông tin tài khoản.' });
+            return res.status(500).json({ error: req.__('general.server_error') });
         }
     }
 
@@ -98,7 +98,7 @@ class AccountInfoController {
             });
 
             return res.json({
-                message: 'Lấy danh sách thông báo thành công',
+                message: req.__('notification.list_success'),
                 data: result.notifications,
                 pagination: {
                     totalItems: result.total,
@@ -110,7 +110,7 @@ class AccountInfoController {
 
         } catch (error) {
             Log.error(`[NotificationController] ${error}`);
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+            return res.status(500).json({ error: req.__('notification.error_occurred') });
         }
     }
 
@@ -124,12 +124,12 @@ class AccountInfoController {
         try {
             const success = await Notification.markAsRead(Number(notificationId), user.id);
             if (!success) {
-                return res.status(404).json({ error: 'Không tìm thấy thông báo hoặc bạn không có quyền.' });
+                return res.status(404).json({ error: req.__('notification.not_found_or_no_permission') });
             }
-            return res.json({ message: 'Đã cập nhật thông báo.' });
+            return res.json({ message: req.__('notification.mark_read_success') });
         } catch (error) {
             Log.error(`[NotificationController] ${error}`);
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+            return res.status(500).json({ error: req.__('notification.error_occurred') });
         }
     }
 
@@ -140,11 +140,11 @@ class AccountInfoController {
         const user = req.user as IUser;
         try {
             const count = await Notification.markAllAsRead(user.id);
-            return res.json({ message: `Đã cập nhật ${count} thông báo.` });
+            return res.json({ message: req.__('notification.mark_all_read_success', { count: count.toString() }) });
         } catch (error)
         {
             Log.error(`[NotificationController] ${error}`);
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+            return res.status(500).json({ error: req.__('notification.error_occurred') });
         }
     }
 
@@ -167,7 +167,7 @@ class AccountInfoController {
         const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
 
         return res.json({
-            message: 'Scan this QR code with your authenticator app.',
+            message: req.__('auth.2fa_scan_qr'),
             secret: secret.base32, // Gửi secret để user có thể nhập thủ công
             qrCode: qrCodeDataURL
         });
@@ -183,7 +183,7 @@ class AccountInfoController {
         const getUser = await User.findById(user.id);
 
         if (!getUser.two_fa_secret) {
-            return res.status(400).json({ error: '2FA secret not found. Please setup first.' });
+            return res.status(400).json({ error: req.__('auth.2fa_secret_not_found') });
         }
 
         const verified = speakeasy.totp.verify({
@@ -195,10 +195,10 @@ class AccountInfoController {
         if (verified) {
             // Nếu mã chính xác, bật 2FA
             await User.updateData(user.id, { two_fa_enabled: true });
-            return res.json({ message: '2FA has been enabled successfully.' });
+            return res.json({ message: req.__('auth.2fa_setup_success') });
         }
 
-        return res.status(400).json({ error: 'Invalid token. Please try again.' });
+        return res.status(400).json({ error: req.__('auth.2fa_invalid_code') });
     }
 
     /**
@@ -209,19 +209,19 @@ class AccountInfoController {
         const { password } = req.body;
 
         if (!password) {
-            return res.status(400).json({ error: 'Vui lòng nhập mật khẩu.' });
+            return res.status(400).json({ error: req.__('auth.password_required') });
         }
 
         // Lấy thông tin user từ DB để kiểm tra mật khẩu
         const userFromDb = await User.findById(user.id);
         if (!userFromDb) {
-            return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+            return res.status(404).json({ error: req.__('user.not_found') });
         }
 
         // Giả sử User model có phương thức comparePassword
         const isMatch = await userFromDb.comparePassword(password);
         if (!isMatch) {
-            return res.status(401).json({ error: 'Mật khẩu không đúng.' });
+            return res.status(401).json({ error: req.__('auth.password_incorrect') });
         }
 
         await User.updateData(user.id, {
@@ -229,7 +229,7 @@ class AccountInfoController {
             two_fa_secret: null
         });
 
-        return res.json({ message: '2FA has been disabled.' });
+        return res.json({ message: req.__('auth.2fa_disabled_success') });
     }
 }
 

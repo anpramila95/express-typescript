@@ -2,6 +2,239 @@
 	"Welcome": "Welcome",
 	"A Web & API server built using TypeScript": "A Web & API server built using TypeScript",
 	"account_info": {
-		"success": "account_info.success"
+		"success": "Account information retrieved successfully"
+	},
+	"validation": {
+		"email_blank": "E-mail cannot be blank",
+		"email_invalid": "E-mail is not valid",
+		"password_blank": "Password cannot be blank",
+		"password_min_length": "Password length must be at least 8 characters",
+		"confirm_password_blank": "Confirmation Password cannot be blank",
+		"password_mismatch": "Password & Confirmation password does not match"
+	},
+	"auth": {
+		"login_success": "You are successfully logged in now!",
+		"register_success": "You have been successfully registered!",
+		"account_exists": "Account with this e-mail address already exists.",
+		"account_or_password_incorrect": "Account or password is incorrect.",
+		"social_login_required": "Please login using your social media account.",
+		"account_blocked": "Your account has been blocked on this website.",
+		"account_blocked_with_reason": "Your account has been blocked on this website. Reason: {{reason}}",
+		"2fa_required": "Please provide your 2FA token.",
+		"2fa_invalid_temp_token": "Temporary token and 2FA code are required.",
+		"2fa_invalid_token": "Invalid temporary token.",
+		"2fa_not_enabled": "2FA is not enabled for this user.",
+		"2fa_invalid_code": "Invalid 2FA code.",
+		"2fa_expired_token": "Invalid or expired temporary token.",
+		"2fa_setup_success": "2FA has been enabled successfully.",
+		"2fa_disabled_success": "2FA has been disabled.",
+		"2fa_scan_qr": "Scan this QR code with your authenticator app.",
+		"2fa_secret_not_found": "2FA secret not found. Please setup first.",
+		"password_required": "Please enter your password.",
+		"password_incorrect": "Password is incorrect."
+	},
+	"user": {
+		"not_found": "User information not found.",
+		"email_already_used": "This email address is already in use.",
+		"no_fields_to_update": "No fields to update.",
+		"user_not_found_by_id": "User with ID {{id}} not found.",
+		"cannot_get_permissions": "Cannot retrieve user permissions."
+	},
+	"notification": {
+		"list_success": "Notifications retrieved successfully",
+		"mark_read_success": "Notification updated.",
+		"mark_all_read_success": "Updated {{count}} notifications.",
+		"not_found_or_no_permission": "Notification not found or you don't have permission.",
+		"error_occurred": "An error occurred, please try again."
+	},
+	"credit": {
+		"select_package": "Please select a credit package.",
+		"site_not_found": "Site information not found.",
+		"package_not_found": "Credit package does not exist.",
+		"request_sent": "Credit purchase request has been sent and is pending approval."
+	},
+	"general": {
+		"server_error": "Server error occurred.",
+		"error_occurred": "An error occurred, please try again later."
+	},
+	"titles": {
+		"login": "LogIn",
+		"signup": "SignUp"
+	},
+	"subscription": {
+		"free_plan": "Free Plan",
+		"default_description": "You are on the default plan."
+	},
+	"affiliate": {
+		"server_error": "Server error.",
+		"provide_amount_payment": "Please provide amount and payment details.",
+		"amount_exceeds_balance": "Requested amount exceeds available balance.",
+		"withdrawal_request_sent": "Your withdrawal request has been sent and is pending processing.",
+		"withdrawal_history_error": "Error retrieving withdrawal history.",
+		"downline_details_error": "Error retrieving downline details."
+	},
+	"api_key": {
+		"list_success": "API keys list retrieved successfully.",
+		"server_error": "Server error.",
+		"limit_reached": "You have reached the maximum limit of 5 API keys. Please revoke a key before creating a new one.",
+		"created_success": "API Key has been created successfully. Please copy and save it in a safe place, you will not be able to view it again.",
+		"revoked_success": "API key revoked successfully.",
+		"not_found_or_no_permission": "API key not found or you don't have permission to revoke it."
+	},
+	"media": {
+		"list_success": "Media list retrieved successfully.",
+		"server_error": "Server error when retrieving media data.",
+		"no_file_uploaded": "No file was uploaded.",
+		"upload_success": "File uploaded successfully",
+		"cannot_save_media": "Cannot save media information.",
+		"provide_video_url": "Please provide videoUrl.",
+		"video_imported_success": "Video imported successfully.",
+		"cannot_import_video": "Cannot import video from provided URL.",
+		"import_video_error": "Error during video import process.",
+		"type_required": "Field 'type' is required.",
+		"insufficient_credits": "You don't have enough credits to perform this action.",
+		"concurrent_jobs_limit": "You have reached the limit of {limit} concurrent jobs. Please wait for current jobs to complete.",
+		"request_accepted": "Your request has been accepted and is being processed.",
+		"ai_request_error": "Error when creating AI request.",
+		"invalid_media_id": "Invalid media ID.",
+		"no_permission_delete": "You don't have permission to delete this media item.",
+		"delete_success": "Media deleted successfully.",
+		"cannot_delete_media": "Cannot delete media.",
+		"cannot_get_folder_data": "Cannot retrieve folder data.",
+		"folder_name_required": "Folder name is required.",
+		"create_folder_success": "Folder created successfully.",
+		"cannot_create_folder": "Cannot create folder.",
+		"items_array_required": "Field 'items' must be an array and cannot be empty.",
+		"move_items_success": "Selected items moved successfully.",
+		"move_items_error": "An error occurred during the move process."
+	},
+	"payment": {
+		"provide_transaction_info": "Please provide complete transaction information and payment method.",
+		"invalid_transaction": "Invalid transaction.",
+		"paypal_success": "Payment successful via PayPal"
+	},
+	"plan": {
+		"cannot_load_plans": "Cannot load service plans list.",
+		"select_pricing_plan": "Please select a pricing plan.",
+		"site_not_found": "Site information not found.",
+		"invalid_pricing_plan": "Invalid pricing plan.",
+		"invalid_discount_code": "Discount code is invalid or expired.",
+		"upgrade_request_sent": "Your upgrade request has been sent successfully.",
+		"processing_error": "An error occurred during processing."
+	},
+	"profile": {
+		"update_success": "Profile updated successfully",
+		"update_error": "Server error while updating profile"
+	},
+	"transaction": {
+		"not_found": "Transaction not found.",
+		"no_permission": "You don't have permission to view this transaction.",
+		"details": "Transaction details",
+		"login_required": "You need to login to view transactions.",
+		"list_error": "Error retrieving transaction list."
+	},
+	"webhook": {
+		"stripe_success": "Payment successful via Stripe",
+		"coinbase_success": "Payment successful via Coinbase",
+		"paypal_success": "Payment successful via PayPal Webhook",
+		"processed_successfully": "Webhook processed successfully.",
+		"verify_error": "Webhook Error: Could not verify payload"
+	},
+	"admin": {
+		"invalid_transaction": "Invalid transaction or already processed.",
+		"cannot_self_approve": "You cannot approve transactions for yourself.",
+		"user_not_in_site": "User does not belong to this site.",
+		"missing_pricing_id": "Subscription transaction does not have pricing_id in meta.",
+		"approved_by_admin": "Approved by admin",
+		"transaction_approved": "Transaction approved successfully.",
+		"transaction_approved_title": "Your transaction has been approved",
+		"transaction_approved_message": "Transaction #{transactionId} has been approved.",
+		"processing_error": "An error occurred during processing: {error}",
+		"provide_rejection_reason": "Please provide a reason for rejection.",
+		"cannot_self_process": "You cannot process transactions for yourself.",
+		"transaction_rejected": "Transaction has been rejected.",
+		"transaction_rejected_title": "Your transaction was rejected",
+		"transaction_rejected_message": "Unfortunately, transaction #{transactionId} was rejected. Reason: {reason}",
+		"provide_user_pricing": "Need to provide userId and pricingPlanId.",
+		"cannot_self_assign": "You cannot assign plans to yourself.",
+		"user_not_found": "User not found.",
+		"pricing_plan_not_found": "Pricing plan not found.",
+		"subscription_plan_not_found": "Corresponding subscription plan not found.",
+		"plan_not_in_site": "Service plan does not belong to this site.",
+		"plan_assigned_success": "Successfully assigned plan \"{planName}\" to user.",
+		"system_error": "System error occurred: {error}",
+		"provide_user_amount": "Need to provide userId and amount.",
+		"cannot_self_credit": "You cannot add credits to yourself.",
+		"credits_added_success": "Successfully added {amount} credits ({type}) to user.",
+		"system_error_simple": "System error occurred.",
+		"provide_user_package": "Need to provide userId and packageId.",
+		"package_added_success": "Successfully added package {packageId} to user.",
+		"package_add_error": "Error when admin adds package to user.",
+		"server_error": "Server error.",
+		"withdrawal_not_found": "Withdrawal request not found.",
+		"invalid_status": "Invalid status.",
+		"provide_rejection_reason_withdrawal": "Please provide a reason for rejection.",
+		"withdrawal_processed": "Successfully processed withdrawal request with status: {status}.",
+		"withdrawal_not_found_or_processed": "Request not found or already processed."
+	},
+	"permission": {
+		"name_required": "Permission name is required.",
+		"create_success": "Permission created successfully.",
+		"create_error": "Error creating permission."
+	},
+	"role": {
+		"name_required": "Role name is required.",
+		"create_success": "Role created successfully",
+		"permission_ids_required": "permissionIds must be an array and cannot be empty.",
+		"role_not_found": "Role not found.",
+		"no_permission_edit": "You do not have permission to edit this role.",
+		"assign_permissions_success": "Successfully assigned permissions to role.",
+		"assign_permissions_error": "An error occurred, please try again."
+	},
+	"site_admin": {
+		"no_access": "You do not have access to this function.",
+		"system_error": "A system error occurred.",
+		"provide_user_id_block": "Please provide the user ID to block.",
+		"cannot_block_self": "You cannot block yourself.",
+		"user_blocked_success": "Successfully blocked user ID {userId}.",
+		"provide_user_id_unblock": "Please provide the user ID to unblock.",
+		"no_permission_change_password": "You do not have permission to change this user's password.",
+		"user_unblocked_success": "Successfully unblocked user ID {userId}.",
+		"user_not_blocked": "This user is not blocked or has been unblocked previously.",
+		"provide_user_password": "Need to provide userId and new password.",
+		"user_not_found": "User not found.",
+		"password_updated_success": "Password has been updated successfully.",
+		"plan_name_jobs_required": "Plan name and max_concurrent_jobs are required.",
+		"server_error_create_plan": "Server error when creating service plan.",
+		"plan_fields_required": "plan_id, name, price, and duration_days are required.",
+		"subscription_plan_not_found": "Subscription plan with ID: {planId} not found in this site.",
+		"server_error_create_pricing": "Server error when creating pricing plan.",
+		"discount_fields_required": "code, discount_type, and discount_value are required.",
+		"invalid_discount_type": "discount_type must be \"percentage\" or \"fixed_amount\".",
+		"discount_code_exists": "Code \"{code}\" already exists.",
+		"server_error_create_discount": "Server error when creating discount code."
+	},
+	"user_management": {
+		"role_id_required": "Role ID (roleId) is required.",
+		"user_not_found": "User not found.",
+		"role_not_found": "Role not found.",
+		"no_permission_user": "You do not have permission to operate on this user.",
+		"no_permission_role": "You do not have permission to use this role.",
+		"assign_role_success": "Successfully assigned role to user.",
+		"assign_role_error": "An error occurred, please try again.",
+		"user_info_required": "Please provide complete information: full name, email, password and role.",
+		"invalid_role": "Role is invalid or not within your authority.",
+		"create_user_success": "User created successfully."
+	},
+	"super_admin": {
+		"feature_codes_array": "`featureCodes` must be an array.",
+		"update_features_success": "Successfully updated features for site.",
+		"server_error": "A server error occurred.",
+		"function_needs_implementation": "This function needs to be implemented in the Site model"
+	},
+	"transaction": {
+		"upgrade_request": "Upgrade request for plan: {planName}",
+		"purchase_request": "Purchase request for {credits} credits",
+		"purchase_package_request": "Purchase request for package: {packageName}"
 	}
 }

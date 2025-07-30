@@ -42,7 +42,7 @@ class Notification {
                 total: countRows[0].total
             };
         } catch (error) {
-            Log.error(`[NotificationModel] Lỗi khi tìm thông báo cho user ${userId}: ${error}`);
+            Log.error(`[NotificationModel] Error finding notifications for user ${userId}: ${error}`);
             throw error;
         }
     }
@@ -61,7 +61,7 @@ class Notification {
             ]);
             return { success: result.affectedRows > 0, insertId: result.insertId };
         } catch (error) {
-            Log.error(`[NotificationModel] Lỗi khi tạo thông báo: ${error}`);
+            Log.error(`[NotificationModel] Error creating notification: ${error}`);
             throw error;
         }
     }
@@ -75,7 +75,7 @@ class Notification {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [notificationId, userId]);
             return result.affectedRows > 0;
         } catch (error) {
-            Log.error(`[NotificationModel] Lỗi khi đánh dấu đã đọc: ${error}`);
+            Log.error(`[NotificationModel] Error marking as read: ${error}`);
             throw error;
         }
     }
@@ -89,7 +89,7 @@ class Notification {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [userId]);
             return result.affectedRows;
         } catch (error) {
-            Log.error(`[NotificationModel] Lỗi khi đánh dấu tất cả đã đọc: ${error}`);
+            Log.error(`[NotificationModel] Error marking all as read: ${error}`);
             throw error;
         }
     }

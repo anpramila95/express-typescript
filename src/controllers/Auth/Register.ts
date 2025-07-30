@@ -10,17 +10,17 @@ import { IRequest, IResponse, INext } from '../../interfaces/vendors';
 class Register {
 	public static show (req: IRequest, res: IResponse): any {
 		return res.render('pages/signup', {
-			title: 'SignUp'
+			title: req.__('titles.signup')
 		});
 	}
 
 	public static async perform (req: IRequest, res: IResponse, next: INext): Promise<any> {
-		req.assert('email', 'E-mail cannot be blank').notEmpty();
-		req.assert('email', 'E-mail is not valid').isEmail();
-		req.assert('password', 'Password cannot be blank').notEmpty();
-		req.assert('password', 'Password length must be atleast 8 characters').isLength({ min: 8 });
-		req.assert('confirmPassword', 'Confirmation Password cannot be blank').notEmpty();
-		req.assert('confirmPassword', 'Password & Confirmation password does not match').equals(req.body.password);
+		req.assert('email', req.__('validation.email_blank')).notEmpty();
+		req.assert('email', req.__('validation.email_invalid')).isEmail();
+		req.assert('password', req.__('validation.password_blank')).notEmpty();
+		req.assert('password', req.__('validation.password_min_length')).isLength({ min: 8 });
+		req.assert('confirmPassword', req.__('validation.confirm_password_blank')).notEmpty();
+		req.assert('confirmPassword', req.__('validation.password_mismatch')).equals(req.body.password);
 		req.sanitize('email').normalizeEmail({ gmail_remove_dots: false });
 
 		const errors = req.validationErrors();
@@ -32,7 +32,7 @@ class Register {
 		try {
 			const existingUser = await User.findOne({ email: req.body.email });
 			if (existingUser) {
-				req.flash('errors', { msg: 'Account with that e-mail address already exists.' });
+				req.flash('errors', { msg: req.__('auth.account_exists') });
 				return res.redirect('/signup');
 			}
 
@@ -50,12 +50,12 @@ class Register {
 				if (err) {
 					return next(err);
 				}
-				req.flash('success', { msg: 'You are successfully logged in!' });
+				req.flash('success', { msg: req.__('auth.register_success') });
 				res.redirect('/account');
 			});
 		} catch (error) {
 			console.log('Error during registration:', error);
-			req.flash('errors', { msg: 'An error occurred while registering your account. Please try again later.' });
+			req.flash('errors', { msg: req.__('general.error_occurred') });
 
 			return res.redirect('/signup');
 		}

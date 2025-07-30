@@ -5,6 +5,7 @@ import { ISubscriptionPlan } from './SubscriptionPlan';
 import { IPricingPlan } from './PricingPlan'; // Import IPricingPlan
 import { ICreditPackage } from './CreditPackage';
 import DiscountCode, {IDiscountCode} from './DiscountCode'; // <-- Import
+import * as i18n from 'i18n';
 
 
 export interface ITransaction {
@@ -86,23 +87,23 @@ class Transaction {
     /**
      * Tạo một yêu cầu nâng cấp gói trong bảng transactions.
      * @param userId ID của người dùng.
-     * @param plan Thông tin gói dịch vụ (để lấy plan_id).
-     * @param pricingPlan Thông tin gói giá đã chọn (để lấy giá, tiền tệ, và thời hạn).
-     */
-    /**
-     * Tạo yêu cầu nâng cấp gói, có thể có giảm giá.
+     * @param siteId ID của site.
+     * @param pricingPlan Thông tin gói giá đã chọn.
+     * @param discountInfo Thông tin giảm giá (tùy chọn).
+     * @param locale Ngôn ngữ để tạo description (mặc định: 'en').
      */
     public static async createSubscriptionRequest(
         userId: number,
-        siteId: number, // Thêm site_id parameter
+        siteId: number,
         pricingPlan: IPricingPlan,
-        discountInfo?: { code: IDiscountCode; finalAmount: number }
+        discountInfo?: { code: IDiscountCode; finalAmount: number },
+        locale: string = 'en'
     ): Promise<{ id: number }> {
 
         const originalAmount = pricingPlan.price;
         const finalAmount = discountInfo ? discountInfo.finalAmount : originalAmount;
 
-        const description = `Yêu cầu nâng cấp gói: ${pricingPlan.name}`;
+        const description = i18n.__({ phrase: 'transaction.upgrade_request', locale }, { planName: pricingPlan.name });
         
         const meta = {
             pricing_id: pricingPlan.id,
@@ -143,21 +144,24 @@ class Transaction {
     /**
      * Tạo một yêu cầu giao dịch để mua gói credit, có thể có giảm giá.
      * @param userId - ID của người dùng thực hiện.
+     * @param siteId - ID của site.
      * @param creditPackage - Toàn bộ object của gói credit được mua.
      * @param discountInfo - (Tùy chọn) Thông tin giảm giá đã được xác thực.
+     * @param locale - Ngôn ngữ để tạo description (mặc định: 'en').
      */
     public static async createCreditPurchaseRequest(
         userId: number,
-        siteId: number, // Thêm site_id parameter
-        creditPackage: ICreditPackage, // Giả sử model của bạn là CreditPackage
-        discountInfo?: { code: IDiscountCode; finalAmount: number }
+        siteId: number,
+        creditPackage: ICreditPackage,
+        discountInfo?: { code: IDiscountCode; finalAmount: number },
+        locale: string = 'en'
     ): Promise<{ id: number }> {
 
         const originalAmount = creditPackage.price;
         const finalAmount = discountInfo ? discountInfo.finalAmount : originalAmount;
-        const creditsAmount = creditPackage.credits_amount; // Giả sử gói có trường 'credits_amount'
+        const creditsAmount = creditPackage.credits_amount;
 
-        const description = `Yêu cầu mua gói: ${creditsAmount} credits`;
+        const description = i18n.__({ phrase: 'transaction.purchase_request', locale }, { credits: creditsAmount });
 
         const meta = {
             package_id: creditPackage.id,
@@ -195,12 +199,17 @@ class Transaction {
     }
 
 
-    public static async createCreditRequest(userId: number, siteId: number, pkg: ICreditPackage): Promise<{ id: number }> {
+    public static async createCreditRequest(
+        userId: number, 
+        siteId: number, 
+        pkg: ICreditPackage, 
+        locale: string = 'en'
+    ): Promise<{ id: number }> {
         const sql = `
             INSERT INTO transactions (user_id, site_id, type, description, amount, credits_change, package_id, status) 
             VALUES (?, ?, 'credit', ?, ?, ?, ?, 'pending')
         `;
-        const description = `Yêu cầu mua gói: ${pkg.name}`;
+        const description = i18n.__({ phrase: 'transaction.purchase_package_request', locale }, { packageName: pkg.name });
         try {
             const [result] = await Database.pool.execute<mysql.ResultSetHeader>(sql, [userId, siteId, description, pkg.price, pkg.credits_amount, pkg.id]);
             return { id: result.insertId };

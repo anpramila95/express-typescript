@@ -27,7 +27,7 @@ class WebhookController {
             if (transaction && transaction.status === 'pending') {
                 // TODO: Xử lý logic sau khi thanh toán thành công
                 // Ví dụ: cập nhật trạng thái transaction, cộng credit, nâng cấp gói...
-                await Transaction.updateStatus(transactionId, 'approved', 'Thanh toán thành công qua Stripe');
+                await Transaction.updateStatus(transactionId, 'approved', 'Payment successful via Stripe');
                 // Gọi các service tương ứng...
             }
         }
@@ -51,7 +51,7 @@ class WebhookController {
                 const transaction = await Transaction.findById(transactionId);
                 if (transaction && transaction.status === 'pending') {
                     // Cập nhật trạng thái
-                    await Transaction.updateStatus(transactionId, 'approved', 'Thanh toán thành công qua Coinbase');
+                    await Transaction.updateStatus(transactionId, 'approved', 'Payment successful via Coinbase');
                     // Cộng credit, kích hoạt gói...
                 }
             }
@@ -78,7 +78,7 @@ class WebhookController {
 
             const transaction = await Transaction.findById(transactionId);
             if (transaction && transaction.status === 'pending') {
-                 await Transaction.updateStatus(transactionId, 'approved', 'Thanh toán thành công qua PayPal Webhook');
+                 await Transaction.updateStatus(transactionId, 'approved', 'Payment successful via PayPal Webhook');
                  // Cộng credit, kích hoạt gói...
             }
         }

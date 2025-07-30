@@ -20,10 +20,10 @@ import { events } from '../../../events/definitions';
 
 class Login {
     public static async perform(req: Request, res: Response): Promise<any> {
-        req.assert('email', 'E-mail cannot be blank').notEmpty();
-        req.assert('email', 'E-mail is not valid').isEmail();
-        req.assert('password', 'Password cannot be blank').notEmpty();
-        req.assert('password', 'Password length must be at least 8 characters').isLength({ min: 8 });
+        req.assert('email', req.__('validation.email_blank')).notEmpty();
+        req.assert('email', req.__('validation.email_invalid')).isEmail();
+        req.assert('password', req.__('validation.password_blank')).notEmpty();
+        req.assert('password', req.__('validation.password_min_length')).isLength({ min: 8 });
         req.sanitize('email').normalizeEmail({ gmail_remove_dots: false });
 
         const errors = req.validationErrors();
@@ -41,7 +41,7 @@ class Login {
             const user = await User.findOne({ email: email, site_id: site.id });
             if (!user) {
                 return res.status(404).json({
-                    error: 'Tài khoản hoặc mật khẩu không chính xác.' // Thông báo chung chung để tăng bảo mật
+                    error: req.__('auth.account_or_password_incorrect') // Thông báo chung chung để tăng bảo mật
                 });
             }
 
@@ -52,9 +52,9 @@ class Login {
                 Log.warn(`Đăng nhập bị chặn cho user ID: ${user.id} trên site ID: ${site.id}`);
 
                 // Xây dựng thông báo lỗi
-                let errorMessage = 'Tài khoản của bạn đã bị khóa trên trang web này.';
+                let errorMessage = req.__('auth.account_blocked');
                 if (blockDetails.reason) {
-                    errorMessage += ` Lý do: ${blockDetails.reason}`;
+                    errorMessage = req.__('auth.account_blocked_with_reason', { reason: blockDetails.reason });
                 }
 
                 return res.status(403).json({
@@ -65,7 +65,7 @@ class Login {
 
             if (!user.password) {
                 return res.status(401).json({
-                    error: 'Vui lòng đăng nhập bằng tài khoản mạng xã hội của bạn.'
+                    error: req.__('auth.social_login_required')
                 });
             }
 
@@ -73,7 +73,7 @@ class Login {
             const isMatch = await user.comparePassword(password);
             if (!isMatch) {
                 return res.status(401).json({
-                    error: 'Tài khoản hoặc mật khẩu không chính xác.'
+                    error: req.__('auth.account_or_password_incorrect')
                 });
             }
 
@@ -94,7 +94,7 @@ class Login {
                 );
 
                 return res.status(200).json({
-                    message: 'Please provide your 2FA token.',
+                    message: req.__('auth.2fa_required'),
                     two_factor_required: true,
                     temp_token: tempToken
                 });
@@ -132,18 +132,18 @@ class Login {
         const { temp_token, code } = req.body;
 
         if (!temp_token || !code) {
-            return res.status(400).json({ error: 'Temporary token and 2FA code are required.' });
+            return res.status(400).json({ error: req.__('auth.2fa_invalid_temp_token') });
         }
 
         try {
             const decoded: any = jwt.verify(temp_token, res.locals.app.appSecret);
             if (decoded.action !== '2fa_verify') {
-                return res.status(401).json({ error: 'Invalid temporary token.' });
+                return res.status(401).json({ error: req.__('auth.2fa_invalid_token') });
             }
 
             const user = await User.findById(decoded.id);
             if (!user || !user.two_fa_enabled || !user.two_fa_secret) {
-                return res.status(401).json({ error: '2FA is not enabled for this user.' });
+                return res.status(401).json({ error: req.__('auth.2fa_not_enabled') });
             }
 
             const verified = speakeasy.totp.verify({
@@ -154,7 +154,7 @@ class Login {
             });
 
             if (!verified) {
-                return res.status(401).json({ error: 'Invalid 2FA code.' });
+                return res.status(401).json({ error: req.__('auth.2fa_invalid_code') });
             }
 
             // Nếu mã 2FA chính xác, tạo token đăng nhập cuối cùng
@@ -169,7 +169,7 @@ class Login {
             return res.json({ user, token: finalToken, token_expires_in: res.locals.app.jwtExpiresIn * 60 });
 
         } catch (error) {
-            return res.status(401).json({ error: 'Invalid or expired temporary token.' });
+            return res.status(401).json({ error: req.__('auth.2fa_expired_token') });
         }
     }
 }

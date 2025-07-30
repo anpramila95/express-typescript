@@ -17,7 +17,7 @@ class ProfileController {
         try {
             const userToUpdate = await User.findById(user.id);
             if (!userToUpdate) {
-                return res.status(404).json({ error: 'User not found' });
+                return res.status(404).json({ error: req.__('user.not_found') });
             }
 
             const data = {
@@ -31,11 +31,11 @@ class ProfileController {
             await User.update(data,user.id);
             
             return res.json({
-                message: 'Profile updated successfully'
+                message: req.__('profile.update_success')
             });
         } catch (error) {
             Log.error(`[ProfileController] ${error.stack}`);
-            return res.status(500).json({ error: 'Server error while updating profile' });
+            return res.status(500).json({ error: req.__('profile.update_error') });
         }
     }
 }

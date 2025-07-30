@@ -45,17 +45,17 @@ class ApprovalController {
 
         const transaction = await Transaction.findByIdWithPaymentDetails(transactionId);
         if (!transaction || transaction.status !== 'pending') {
-            return res.status(404).json({ error: 'Giao dịch không hợp lệ hoặc đã được xử lý.' });
+            return res.status(404).json({ error: req.__('admin.invalid_transaction') });
         }
 
         // if(transaction.user_id == admin.id) {
-        //     return res.status(403).json({ error: "Bạn không thể tự duyệt giao dịch cho chính mình." });
+        //     return res.status(403).json({ error: req.__('admin.cannot_self_approve') });
         // }
 
         const userIdBelongsToSite = await User.userIdBelongsToSite(transaction.user_id, site);
 
         if (!userIdBelongsToSite) {
-            return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+            return res.status(403).json({ error: req.__('admin.user_not_in_site') });
         }
 
         try {
@@ -70,7 +70,7 @@ class ApprovalController {
             } else if (transaction.type === 'subscription') {
                 // --- LOGIC MỚI BẮT ĐẦU TỪ ĐÂY ---
                 if (!transaction.meta || !transaction.meta.pricing_id) {
-                    return res.status(400).json({ error: 'Giao dịch subscription không có pricing_id trong meta.' });
+                    return res.status(400).json({ error: req.__('admin.missing_pricing_id') });
                 }
                 const pricingPlanId = transaction.meta.pricing_id;
 
@@ -84,7 +84,7 @@ class ApprovalController {
                 // --- KẾT THÚC LOGIC MỚI ---
             }
 
-            await Transaction.updateStatus(transactionId, 'approved', adminNotes || 'Đã duyệt bởi admin');
+            await Transaction.updateStatus(transactionId, 'approved', adminNotes || req.__('admin.approved_by_admin'));
             // GỬI THÔNG BÁO QUA NOVU
 
 
@@ -92,8 +92,8 @@ class ApprovalController {
             await NotificationService.create(
                 transaction.user_id,
                 'transaction_approved',
-                'Giao dịch của bạn đã được duyệt',
-                `Giao dịch #${transactionId} đã được chấp thuận.`
+                req.__('admin.transaction_approved_title'),
+                req.__('admin.transaction_approved_message', { transactionId })
             );
 
             await AuditLogService.log({
@@ -107,10 +107,10 @@ class ApprovalController {
                 ipAddress: req.ip
             });
 
-            return res.json({ message: 'Giao dịch đã được duyệt thành công.' });
+            return res.json({ message: req.__('admin.transaction_approved') });
         } catch (error) {
             Log.error(`Lỗi khi duyệt giao dịch ID ${transactionId}: ${error.stack}`);
-            return res.status(500).json({ error: `Đã xảy ra lỗi trong quá trình xử lý: ${error.message}` });
+            return res.status(500).json({ error: req.__('admin.processing_error', { error: error.message }) });
         }
     }
 
@@ -124,17 +124,17 @@ class ApprovalController {
         const site = req.site as ISite;
         const { transactionId } = req.params;
         const { adminNotes } = req.body;
-        if (!adminNotes) return res.status(400).json({ error: 'Vui lòng cung cấp lý do từ chối.' });
+        if (!adminNotes) return res.status(400).json({ error: req.__('admin.provide_rejection_reason') });
         const transaction = await Transaction.findByIdWithPaymentDetails(transactionId);
         if (!transaction || transaction.status !== 'pending') {
-            return res.status(404).json({ error: 'Giao dịch không hợp lệ hoặc đã được xử lý.' });
+            return res.status(404).json({ error: req.__('admin.invalid_transaction') });
         }
         if (transaction.user_id == admin.id) {
-            return res.status(403).json({ error: "Bạn không thể tự xử lý giao dịch cho chính mình." });
+            return res.status(403).json({ error: req.__('admin.cannot_self_process') });
         }
         const userIdBelongsToSite = await User.userIdBelongsToSite(transaction.user_id, site);
         if (!userIdBelongsToSite) {
-            return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+            return res.status(403).json({ error: req.__('admin.user_not_in_site') });
         }
         await Transaction.updateStatus(transactionId, 'rejected', adminNotes);
 
@@ -142,10 +142,10 @@ class ApprovalController {
         await NotificationService.create(
             transaction.user_id,
             'transaction_rejected',
-            'Giao dịch của bạn bị từ chối',
-            `Rất tiếc, giao dịch #${transactionId} đã bị từ chối. Lý do: ${adminNotes}`
+            req.__('admin.transaction_rejected_title'),
+            req.__('admin.transaction_rejected_message', { transactionId, reason: adminNotes })
         );
-        return res.json({ message: 'Giao dịch đã bị từ chối.' });
+        return res.json({ message: req.__('admin.transaction_rejected') });
     }
 
     /**
@@ -159,22 +159,22 @@ class ApprovalController {
         const { userId, pricingPlanId, adminNotes = "Gán trực tiếp bởi Admin" } = req.body;
 
         if (!userId || !pricingPlanId) {
-            return res.status(400).json({ error: 'Cần cung cấp userId và pricingPlanId.' });
+            return res.status(400).json({ error: req.__('admin.provide_user_pricing') });
         }
         if (userId == admin.id) {
-            return res.status(403).json({ error: "Bạn không thể tự gán gói cho chính mình." });
+            return res.status(403).json({ error: req.__('admin.cannot_self_assign') });
         }
 
         try {
             const user = await User.findById(userId);
-            if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+            if (!user) return res.status(404).json({ error: req.__('admin.user_not_found') });
             if (user.site_id !== site.id && user.id !== site.user_id) {
-                return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+                return res.status(403).json({ error: req.__('admin.user_not_in_site') });
             }
 
             // --- Kiểm tra pricing plan có tồn tại không ---
             const pricingPlan = await PricingPlan.findByIdSiteId(pricingPlanId, site.id);
-            if (!pricingPlan) return res.status(404).json({ error: 'Không tìm thấy gói giá (pricing plan).' });
+            if (!pricingPlan) return res.status(404).json({ error: req.__('admin.pricing_plan_not_found') });
 
             // 2. Tạo gói mới
             const newSubscription = await SubscriptionService.changeUserPlan(userId, pricingPlanId);
@@ -182,11 +182,11 @@ class ApprovalController {
             // 3. Tạo một bản ghi giao dịch đã được duyệt để lưu lại lịch sử
             const plan = await SubscriptionPlan.findById(pricingPlan.plan_id); // Lấy plan gốc để ghi log
             if (!plan) {
-                return res.status(404).json({ error: 'Không tìm thấy gói dịch vụ tương ứng.' });
+                return res.status(404).json({ error: req.__('admin.subscription_plan_not_found') });
             }
 
             if (plan.site_id != site.id) {
-                return res.status(403).json({ error: "Gói dịch vụ không thuộc về site này." });
+                return res.status(403).json({ error: req.__('admin.plan_not_in_site') });
             }
             // Tạo bản ghi giao dịch đã duyệt
             const description = `Admin gán trực tiếp gói: ${plan.name} - ${pricingPlan.name}`;
@@ -203,10 +203,10 @@ class ApprovalController {
                 notes: adminNotes,
                 site_id: site.id
             });
-            return res.json({ message: `Đã gán thành công gói "${pricingPlan.name}" cho người dùng.` });
+            return res.json({ message: req.__('admin.plan_assigned_success', { planName: pricingPlan.name }) });
         } catch (error) {
             Log.error(`Lỗi khi admin gán gói: ${error.stack}`);
-            return res.status(500).json({ error: `Đã xảy ra lỗi hệ thống: ${error.message}` });
+            return res.status(500).json({ error: req.__('admin.system_error', { error: error.message }) });
         }
     }
 
@@ -221,22 +221,22 @@ class ApprovalController {
         const site = req.site as ISite;
         const { userId, amount, type = 'promotional', expiresInDays, adminNotes } = req.body;
         if (!userId || !amount) {
-            return res.status(400).json({ error: 'Cần cung cấp userId và amount.' });
+            return res.status(400).json({ error: req.__('admin.provide_user_amount') });
         }
         if (userId == admin.id) {
-            return res.status(403).json({ error: "Bạn không thể tự cộng credit cho chính mình." });
+            return res.status(403).json({ error: req.__('admin.cannot_self_credit') });
         }
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+        if (!user) return res.status(404).json({ error: req.__('admin.user_not_found') });
         if (user.site_id !== site.id && user.id !== site.user_id) {
-            return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+            return res.status(403).json({ error: req.__('admin.user_not_in_site') });
         }
         try {
             await UserCredit.add(userId, amount, type, expiresInDays);
-            return res.json({ message: `Đã cộng thành công ${amount} credit (${type}) cho người dùng.` });
+            return res.json({ message: req.__('admin.credits_added_success', { amount, type }) });
         } catch (error) {
             Log.error(`Lỗi khi admin cộng credit: ${error.stack}`);
-            return res.status(500).json({ error: 'Đã xảy ra lỗi hệ thống.' });
+            return res.status(500).json({ error: req.__('admin.system_error_simple') });
         }
     }
 
@@ -247,22 +247,22 @@ class ApprovalController {
         const site = req.site as ISite;
         const { userId, packageId, adminNotes } = req.body;
         if (!userId || !packageId) {
-            return res.status(400).json({ error: 'Cần cung cấp userId và packageId.' });
+            return res.status(400).json({ error: req.__('admin.provide_user_package') });
         }
         if (userId == admin.id) {
-            return res.status(403).json({ error: "Bạn không thể tự cộng credit cho chính mình." });
+            return res.status(403).json({ error: req.__('admin.cannot_self_credit') });
         }
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+        if (!user) return res.status(404).json({ error: req.__('admin.user_not_found') });
         if (user.site_id !== site.id && user.id !== site.user_id) {
-            return res.status(403).json({ error: "Người dùng không thuộc về site này." });
+            return res.status(403).json({ error: req.__('admin.user_not_in_site') });
         }
         try {
             await UserCredit.addPackage(userId, packageId, adminNotes);
-            return res.json({ message: `Đã cộng thành công gói ${packageId} cho người dùng.` });
+            return res.json({ message: req.__('admin.package_added_success', { packageId }) });
         } catch (error) {
-            Log.error(`Lỗi khi admin cộng gói cho người dùng: ${error.stack}`);
-            return res.status(500).json({ error: 'Đã xảy ra lỗi hệ thống.' });
+            Log.error(`${req.__('admin.package_add_error')}: ${error.stack}`);
+            return res.status(500).json({ error: req.__('admin.system_error_simple') });
         }
     }
 
@@ -304,7 +304,7 @@ class ApprovalController {
 
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách yêu cầu rút tiền: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('admin.server_error') });
         }
     }
 
@@ -344,7 +344,7 @@ class ApprovalController {
 
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách yêu cầu rút tiền: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('admin.server_error') });
         }
     }
 
@@ -360,11 +360,11 @@ class ApprovalController {
             if (details) {
                 return res.json(details);
             } else {
-                return res.status(404).json({ error: 'Không tìm thấy yêu cầu rút tiền.' });
+                return res.status(404).json({ error: req.__('admin.withdrawal_not_found') });
             }
         } catch (error) {
             Log.error(`Lỗi khi lấy chi tiết yêu cầu rút tiền: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('admin.server_error') });
         }
     }
 
@@ -376,22 +376,22 @@ class ApprovalController {
         const { status, adminNotes } = req.body; // status: 'approved' hoặc 'rejected'
 
         if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
+            return res.status(400).json({ error: req.__('admin.invalid_status') });
         }
         if (status === 'rejected' && !adminNotes) {
-            return res.status(400).json({ error: 'Vui lòng cung cấp lý do từ chối.' });
+            return res.status(400).json({ error: req.__('admin.provide_rejection_reason_withdrawal') });
         }
 
         try {
             const success = await WithdrawalRequest.updateStatus(parseInt(requestId, 10), status, adminNotes);
             if (success) {
-                return res.json({ message: `Đã xử lý yêu cầu rút tiền thành công với trạng thái: ${status}.` });
+                return res.json({ message: req.__('admin.withdrawal_processed', { status }) });
             } else {
-                return res.status(404).json({ error: 'Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý.' });
+                return res.status(404).json({ error: req.__('admin.withdrawal_not_found_or_processed') });
             }
         } catch (error) {
             Log.error(`Lỗi khi xử lý yêu cầu rút tiền: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('admin.server_error') });
         }
     }
 }

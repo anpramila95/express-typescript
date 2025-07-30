@@ -14,12 +14,12 @@ class PaymentController {
         const { transactionId, paymentMethod } = req.body;
 
         if (!transactionId || !paymentMethod) {
-            return res.status(400).json({ error: 'Vui lòng cung cấp đủ thông tin giao dịch và phương thức thanh toán.' });
+            return res.status(400).json({ error: req.__('payment.provide_transaction_info') });
         }
 
         const transaction = await Transaction.findById(transactionId);
         if (!transaction || transaction.user_id !== user.id || transaction.status !== 'pending') {
-            return res.status(404).json({ error: 'Giao dịch không hợp lệ.' });
+            return res.status(404).json({ error: req.__('payment.invalid_transaction') });
         }
 
         try {
@@ -40,7 +40,7 @@ class PaymentController {
             const transactionId = customData.transaction_id;
             
             // Xử lý logic sau thanh toán
-            await Transaction.updateStatus(transactionId, 'approved', 'Thanh toán thành công qua PayPal');
+            await Transaction.updateStatus(transactionId, 'approved', req.__('payment.paypal_success'));
             // Cộng credit, kích hoạt gói...
             
             res.redirect(`${Locals.config().url}/payment/success`);

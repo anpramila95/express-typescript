@@ -204,7 +204,7 @@ export class User implements IUser {
         } catch (error) {
             // Xử lý lỗi nếu email đã tồn tại
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new Error('Địa chỉ email này đã được sử dụng.');
+                throw new Error('user.email_already_used');
             }
             Log.error(`[UserModel] Lỗi khi tạo người dùng: ${error}`);
             throw error;
@@ -320,7 +320,7 @@ export class User implements IUser {
             values.push(hashedPassword);
         }
         if (fields.length === 0) {
-            throw new Error('Không có trường nào để cập nhật.');
+            throw new Error('user.no_fields_to_update');
         }
         values.push(userId); // Thêm ID người dùng vào cuối để cập nhật
         const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
@@ -375,7 +375,7 @@ export class User implements IUser {
         try {
             const [result] = await Database.pool.execute<ResultSetHeader>(sql, [id]);
             if (result.affectedRows === 0) {
-                throw new Error(`User with ID ${id} not found.`);
+                throw new Error('user.user_not_found_by_id');
             }
         } catch (error) {
             Log.error(`Error deleting user by id: ${error.message}`);
@@ -433,7 +433,7 @@ export class User implements IUser {
         } catch (error) {
             Log.error(`[UserModel] Lỗi khi lấy quyền cho người dùng ${userId}: ${error}`);
             // Ném lỗi ra ngoài để middleware có thể bắt và xử lý
-            throw new Error('Không thể lấy thông tin quyền của người dùng.');
+            throw new Error('user.cannot_get_permissions');
         }
     }
 
@@ -474,7 +474,7 @@ export class User implements IUser {
         // Dynamically build SET clause and values
         const fields = Object.keys(data);
         if (fields.length === 0) {
-            throw new Error('No fields to update.');
+            throw new Error('user.no_fields_to_update');
         }
         const setClause = fields.map(field => `${field} = ?`).join(', ');
         const values = fields.map(field => (field === 'tokens' && Array.isArray(data[field]) ? JSON.stringify(data[field]) : data[field]));

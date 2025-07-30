@@ -14,14 +14,14 @@ class AdminSiteController {
             const { featureCodes } = req.body;
 
             if (!featureCodes || !Array.isArray(featureCodes)) {
-                return res.status(400).json({ error: '`featureCodes` phải là một mảng.' });
+                return res.status(400).json({ error: req.__('super_admin.feature_codes_array') });
             }
 
             await SiteService.updateFeatures(Number(siteId), featureCodes);
-            return res.status(200).json({ message: 'Cập nhật tính năng cho site thành công.' });
+            return res.status(200).json({ message: req.__('super_admin.update_features_success') });
         } catch (error) {
             Log.error(error.stack);
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra ở máy chủ.' });
+            return res.status(500).json({ error: req.__('super_admin.server_error') });
         }
     }
 
@@ -33,10 +33,10 @@ class AdminSiteController {
             // Giả sử model Site của bạn sẽ có phương thức findAll()
             // Nếu chưa có, bạn có thể thêm nó vào model Site.ts
             // const sites = await Site.findAll();
-            return res.status(200).json({ message: "Chức năng này cần được cài đặt trong model Site" });
+            return res.status(200).json({ message: req.__('super_admin.function_needs_implementation') });
         } catch (error) {
             Log.error(error.stack);
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra ở máy chủ.' });
+            return res.status(500).json({ error: req.__('super_admin.server_error') });
         }
     }
 }

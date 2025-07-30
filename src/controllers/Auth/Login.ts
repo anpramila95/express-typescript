@@ -14,15 +14,15 @@ import Log from '../../middlewares/Log';
 class Login {
 	public static show (req: IRequest, res: IResponse): any {
 		return res.render('pages/login', {
-			title: 'LogIn'
+			title: req.__('titles.login')
 		});
 	}
 
 	public static perform (req: IRequest, res: IResponse, next: INext): any {
-		req.assert('email', 'E-mail cannot be blank').notEmpty();
-		req.assert('email', 'E-mail is not valid').isEmail();
-		req.assert('password', 'Password cannot be blank').notEmpty();
-		req.assert('password', 'Password length must be atleast 8 characters').isLength({ min: 8 });
+		req.assert('email', req.__('validation.email_blank')).notEmpty();
+		req.assert('email', req.__('validation.email_invalid')).isEmail();
+		req.assert('password', req.__('validation.password_blank')).notEmpty();
+		req.assert('password', req.__('validation.password_min_length')).isLength({ min: 8 });
 		req.sanitize('email').normalizeEmail({ gmail_remove_dots: false });
 
 		const errors = req.validationErrors();
@@ -48,7 +48,7 @@ class Login {
 					return next(err);
 				}
 
-				req.flash('success', { msg: 'You are successfully logged in now!' });
+				req.flash('success', { msg: req.__('auth.login_success') });
 				res.redirect('/account');
 			});
 		})(req, res, next);

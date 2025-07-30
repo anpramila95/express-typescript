@@ -12,7 +12,7 @@ class UserManagementController {
         const { roleId } = req.body;
 
         if (!roleId) {
-            return res.status(400).json({ error: 'Mã vai trò (roleId) là bắt buộc.' });
+            return res.status(400).json({ error: req.__('user_management.role_id_required') });
         }
         
         try {
@@ -24,19 +24,19 @@ class UserManagementController {
 
             // 2. Kiểm tra xem user và role có tồn tại không
             if (!targetUser) {
-                return res.status(404).json({ error: 'Không tìm thấy người dùng này.' });
+                return res.status(404).json({ error: req.__('user_management.user_not_found') });
             }
             if (!targetRole) {
-                return res.status(404).json({ error: 'Không tìm thấy vai trò này.' });
+                return res.status(404).json({ error: req.__('user_management.role_not_found') });
             }
 
             // 3. Kiểm tra chéo: Cả user và role đều phải thuộc site của admin
             if (targetUser.site_id !== siteAdmin.site_id) {
-                return res.status(403).json({ error: 'Bạn không có quyền thao tác trên người dùng này.' });
+                return res.status(403).json({ error: req.__('user_management.no_permission_user') });
             }
 
             if (targetRole.site_id !== siteAdmin.site_id) {
-                return res.status(403).json({ error: 'Bạn không có quyền sử dụng vai trò này.' });
+                return res.status(403).json({ error: req.__('user_management.no_permission_role') });
             }
 
             // ---- KẾT THÚC PHẦN KIỂM TRA ----
@@ -44,10 +44,10 @@ class UserManagementController {
             // Nếu mọi thứ hợp lệ, tiến hành gán vai trò
             await User.assignRole(Number(userId), roleId, siteAdmin.site_id);
 
-            return res.json({ message: 'Gán vai trò cho người dùng thành công.' });
+            return res.json({ message: req.__('user_management.assign_role_success') });
 
         } catch (error) {
-            return res.status(500).json({ error: 'Đã có lỗi xảy ra, vui lòng thử lại.' });
+            return res.status(500).json({ error: req.__('user_management.assign_role_error') });
         }
     }
 
@@ -60,14 +60,14 @@ class UserManagementController {
 
         // 1. Kiểm tra dữ liệu đầu vào
         if (!fullname || !email || !password || !roleId) {
-            return res.status(400).json({ error: 'Vui lòng cung cấp đầy đủ thông tin: họ tên, email, mật khẩu và vai trò.' });
+            return res.status(400).json({ error: req.__('user_management.user_info_required') });
         }
 
         try {
             // 2. Kiểm tra xem vai trò (roleId) có hợp lệ và thuộc site của admin không
             const roleToAssign = await Role.findById(roleId);
             if (!roleToAssign || roleToAssign.site_id !== siteAdmin.site_id) {
-                return res.status(403).json({ error: 'Vai trò không hợp lệ hoặc không thuộc thẩm quyền của bạn.' });
+                return res.status(403).json({ error: req.__('user_management.invalid_role') });
             }
 
             // 3. Tạo người dùng mới
@@ -83,7 +83,7 @@ class UserManagementController {
             await User.assignRole(newUser.id, roleId, siteAdmin.site_id);
 
             return res.status(201).json({ 
-                message: 'Tạo người dùng thành công.',
+                message: req.__('user_management.create_user_success'),
                 userId: newUser.id 
             });
 

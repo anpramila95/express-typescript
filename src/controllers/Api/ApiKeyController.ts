@@ -18,7 +18,7 @@ class ApiKeyController {
         try {
             const keys = await ApiKey.findAllForUser(user.id);
             return res.json({
-                message: 'Danh sách API keys đã được lấy thành công.',
+                message: req.__('api_key.list_success'),
                 keys: keys.map(key => ({
                     id: key.id,
                     apiKey: key.api_key,
@@ -28,7 +28,7 @@ class ApiKeyController {
             });
         } catch (error) {
             Log.error(`Lỗi khi lấy danh sách API keys: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('api_key.server_error') });
         }
     }
 
@@ -42,7 +42,7 @@ class ApiKeyController {
         try {
             const countAllForUser = await ApiKey.countAllForUser(user.id);
             if (countAllForUser >= 5) {
-                return res.status(400).json({ error: 'Bạn đã đạt giới hạn tối đa 5 API keys. Vui lòng thu hồi một key trước khi tạo key mới.' });
+                return res.status(400).json({ error: req.__('api_key.limit_reached') });
             }
 
             // Tạo key mới trong database
@@ -50,12 +50,12 @@ class ApiKeyController {
 
             // Trả về key mới này cho người dùng **CHỈ MỘT LẦN DUY NHẤT**
             return res.status(201).json({
-                message: 'API Key đã được tạo thành công. Vui lòng sao chép và lưu lại ở nơi an toàn, bạn sẽ không thể xem lại nó.',
+                message: req.__('api_key.created_success'),
                 apiKey: newKey
             });
         } catch (error) {
             Log.error(`Lỗi khi tạo API key: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('api_key.server_error') });
         }
     }
 
@@ -70,14 +70,14 @@ class ApiKeyController {
             const success = await ApiKey.revoke(parseInt(keyId, 10), user.id);
 
             if (success) {
-                return res.json({ message: 'Đã thu hồi API key thành công.' });
+                return res.json({ message: req.__('api_key.revoked_success') });
             } else {
                 // Lỗi có thể do key không tồn tại hoặc không thuộc sở hữu của user
-                return res.status(404).json({ error: 'Không tìm thấy API key hoặc bạn không có quyền thu hồi nó.' });
+                return res.status(404).json({ error: req.__('api_key.not_found_or_no_permission') });
             }
         } catch (error) {
             Log.error(`Lỗi khi thu hồi API key: ${error.stack}`);
-            return res.status(500).json({ error: 'Lỗi máy chủ.' });
+            return res.status(500).json({ error: req.__('api_key.server_error') });
         }
     }
 }
